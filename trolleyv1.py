@@ -4,14 +4,23 @@ root = Tk()
 root.title("The Trolley Problem")
 root.attributes('-fullscreen', True)
 
+for i in range(20):  
+    root.columnconfigure(i, weight=1)
+    root.rowconfigure(i, weight=1)
 
-my_label = Label(root, text = "Hello World!", font = ("Helvetica", 24))
-#Pack(puts on top, packs below), Grid(Rows and columns), and Place(specify coordinates)
+def hide():
+    start_button.grid_forget()
 
-my_label.pack(pady=20)
+title_label = Label(root, text = "Hello World!", font = ("Helvetica", 24))
+title_label.grid(row=2, column=7)
 
-my_button= Button(root, text = "Click Me!", font = ("Helvetica", 20))
-my_button.pack(pady=20)
+start_button= Button(root, text = "Click Me!", font = ("Helvetica", 20), command=hide)
+start_button.grid(row=8, column=5)
 
+exit_button = Button(root, text="Exit Fullscreen", font=("Helvetica", 16), command=lambda: root.attributes('-fullscreen', False))
+exit_button.grid(row=25, column=7)
+
+# Allow Escape key to exit fullscreen
+root.bind("<Escape>", lambda event: root.attributes('-fullscreen', False))
 
 root.mainloop()
