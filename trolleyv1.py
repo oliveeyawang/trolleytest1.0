@@ -11,7 +11,7 @@ class TrolleyGame (object):
         self.timer_id = None
 
 # Grid to work with
-        for i in range(20):  
+        for i in range(30):  
             root.columnconfigure(i, weight=1)
             root.rowconfigure(i, weight=1)
 
@@ -76,23 +76,27 @@ class TrolleyGame (object):
         self.problem_frame.grid(row=0, column=0, rowspan=20, columnspan=20, sticky="nsew")
         self.problem_frame.grid_remove()  # Hide it first
 
-        self.timer_label = Label(self.problem_frame, text="Time: 30", font=("Helvetica", 16))
-        self.timer_label.grid(row=0, column=18, pady=10, padx=10, sticky="ne")
+        for i in range(30):  
+            self.problem_frame.columnconfigure(i, weight=1)
+            self.problem_frame.rowconfigure(i, weight=1)
 
-        self.problem_label = Label(self.problem_frame, text="", font=("Helvetica", 18))
-        self.problem_label.grid(row=3, column=10, columnspan=14, pady=30)
+        self.timer_label = Label(self.problem_frame, text="Time: 30", font=("Helvetica", 16))
+        self.timer_label.grid(row=0, column=28, columnspan=2, pady=10, padx=10, sticky="ne")
+
+        self.problem_label = Label(self.problem_frame, text="", font=("Helvetica", 18), wraplength=900, justify="center", anchor="center")
+        self.problem_label.grid(row=3, column=5, columnspan=24, pady=30)
 
         # Utilitarian button
         self.utilitarian_button = Button(self.problem_frame, text="", font=("Helvetica", 16),
             command=lambda: self.make_choice("utilitarian"),
             bg="#2196F3", fg="white", padx=15, pady=8)
-        self.utilitarian_button.grid(row=10, column=5, columnspan=4, pady=20)
+        self.utilitarian_button.grid(row=10, column=9, columnspan=5, pady=20)
 
         # Deontological button
         self.deontological_button = Button(self.problem_frame, text="", font=("Helvetica", 16),
             command=lambda: self.make_choice("deontological"),
             bg="#FF5722", fg="white", padx=15, pady=8)
-        self.deontological_button.grid(row=10, column=11, columnspan=4, pady=20)
+        self.deontological_button.grid(row=10, column=16, columnspan=5, pady=20)
 
     def show_start_screen(self):
         self.problem_frame.grid_remove()
@@ -116,6 +120,7 @@ class TrolleyGame (object):
             self.problem_label.config(text="You have completed all the trolley dilemmas! Congratulations, you have questionable morals!")
             self.utilitarian_button.grid_remove()
             self.deontological_button.grid_remove()
+            self.timer_label.grid_remove()
 
         self.start_timer()
 
