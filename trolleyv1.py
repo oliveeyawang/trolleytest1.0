@@ -12,8 +12,8 @@ class TrolleyGame (object):
 
 # Grid to work with
         for i in range(30):  
-            root.columnconfigure(i, weight=1)
-            root.rowconfigure(i, weight=1)
+            self.root.columnconfigure(i, weight=1)
+            self.root.rowconfigure(i, weight=1)
 
 # Allow Escape key to exit the fullscreen
         self.root.bind("<Escape>", lambda event: self.root.attributes('-fullscreen', False))
@@ -48,6 +48,15 @@ class TrolleyGame (object):
                 "deontological_option": "Do nothing"
             }
         ]
+
+
+        self.math_problems = [
+            {"question": "12 + 15?", "answer": 27},
+            {"question": "8 x 7?", "answer": 56}
+        ]
+
+        self.math_frame = Frame(self.root)
+        self.setup_math_screen()
 
         self.start_frame = Frame(self.root)
         self.problem_frame = Frame(self.root)
@@ -98,6 +107,13 @@ class TrolleyGame (object):
             bg="#FF5722", fg="white", padx=15, pady=8)
         self.deontological_button.grid(row=10, column=16, columnspan=5, pady=20)
 
+        self.utilitarian_button.config(state=DISABLED)
+        self.deontological_button.config(state=DISABLED)
+
+        self.challenge_button = Button(self.problem_frame, text="Solve Math Challenge First", font=("Helvetica", 14),
+            command=self.show_math_challenge, bg="#FFC107", padx=10, pady=5)
+        self.challenge_button.grid(row=8, column=12, columnspan=4, pady=10)
+
     def show_start_screen(self):
         self.problem_frame.grid_remove()
         self.start_frame.grid()
@@ -106,6 +122,10 @@ class TrolleyGame (object):
         self.start_frame.grid_remove()
         self.problem_frame.grid()
         self.load_problem()
+        # Restart scores when game restarts
+        self.utilitarian_score = 0
+        self.deontological_score = 0
+        self.current_problem = 0
 
     def load_problem(self):
         
@@ -122,6 +142,9 @@ class TrolleyGame (object):
             self.deontological_button.grid_remove()
             self.timer_label.grid_remove()
 
+        self.utilitarian_button.config(state=DISABLED)
+        self.deontological_button.config(state=DISABLED)
+        self.challenge_button.config(state=NORMAL)
         self.start_timer()
 
     def start_timer(self):
@@ -146,11 +169,59 @@ class TrolleyGame (object):
         print(f"Choice made: {choice}")
         if choice == "utilitarian":
             self.utilitarian_score += 1
+        else:
             self.deontological_score += 1
         print(f"Utilitarian: {self.utilitarian_score}, Deontological: {self.deontological_score}")
             
         self.current_problem +=1
         self.load_problem()
+
+    def setup_math_screen(self):
+        self.math_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
+        self.math_frame.grid_remove()
+
+        self.math_label = Label(self.math_frame, text="", font=("Helvetica", 20))
+        self.math_label.grid(row=2, column=10, columnspan=10, pady=20)
+
+        self.math_entry = Entry(self.math_frame, font=("Helvetica", 18), width=10, justify='center')
+        self.math_entry.grid(row=5, column=12, columnspan=6, pady=10)
+
+        self.submit_button = Button(self.math_frame, text="Submit", font=("Helvetica", 16),
+            command=self.check_math_answer)
+        self.submit_button.grid(row=7, column=12, columnspan=6, pady=10)
+
+        self.math_feedback = Label(self.math_frame, text="", font=("Helvetica", 16), fg="red")
+        self.math_feedback.grid(row=9, column=10, columnspan=10)
+
+    def show_math_challenge(self):
+        if self.timer_id:
+            self.root.after_cancel(self.timer_id)
+
+        problem = self.math_problems[self.current_problem % len(self.math_problems)]
+        self.current_math_answer = problem["answer"]
+        self.math_label.config(text=problem["question"])
+        self.math_feedback.config(text="")
+        self.math_entry.delete(0, END)
+
+        self.problem_frame.grid_remove()
+        self.math_frame.grid()
+
+    def check_math_answer(self):
+        try:
+            entered = int(self.math_entry.get())
+            if entered == self.current_math_answer:
+                self.math_frame.grid_remove()
+                self.problem_frame.grid()
+                self.utilitarian_button.config(state=NORMAL)
+                self.deontological_button.config(state=NORMAL)
+                self.challenge_button.config(state=DISABLED)
+                self.update_timer()
+            else:
+                self.math_feedback.config(text="Incorrect. Try again.")
+                self.math_entry.delete(0, END)
+        except ValueError:
+            self.math_feedback.config(text="Please enter a valid number.")
+            self.math_entry.delete(0, END)
 
 if __name__ == "__main__":
     root = Tk()
