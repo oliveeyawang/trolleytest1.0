@@ -133,22 +133,30 @@ class TrolleyGame (object):
             problem = self.trolley_problems[self.current_problem]
 
             self.problem_label.config(text=problem["description"])
-
             self.utilitarian_button.config(text=problem["utilitarian_option"])
             self.deontological_button.config(text=problem["deontological_option"])
+
+            self.utilitarian_button.config(state=DISABLED)
+            self.deontological_button.config(state=DISABLED)
+            self.challenge_button.config(state=NORMAL)
+
+            self.start_timer()
         else:
-            self.problem_label.config(text="You have completed all the trolley dilemmas! Congratulations, you have questionable morals!")
+            summary = f"You've completed all dilemmas.\n\nUtilitarian choices: {self.utilitarian_score}\nDeontological choices: {self.deontological_score}"
+            if self.utilitarian_score > self.deontological_score:
+                summary += "\n\nYou lean utilitarian – you prioritize the greater good over individual rights."
+            elif self.deontological_score > self.utilitarian_score:
+                summary += "\n\nYou lean deontological – you respect moral duties over outcomes."
+            else:
+                summary += "\n\nYou're morally balanced – or indecisive!"
+            self.problem_label.config(text=summary)
             self.utilitarian_button.grid_remove()
             self.deontological_button.grid_remove()
+            self.challenge_button.grid_remove()
             self.timer_label.grid_remove()
 
-        self.utilitarian_button.config(state=DISABLED)
-        self.deontological_button.config(state=DISABLED)
-        self.challenge_button.config(state=NORMAL)
-        self.start_timer()
-
     def start_timer(self):
-        if self.timer_id:
+        if self.timer_id is not None:
             self.root.after_cancel(self.timer_id)
 
         self.time_left = 30
@@ -194,9 +202,6 @@ class TrolleyGame (object):
         self.math_feedback.grid(row=9, column=10, columnspan=10)
 
     def show_math_challenge(self):
-        if self.timer_id:
-            self.root.after_cancel(self.timer_id)
-
         problem = self.math_problems[self.current_problem % len(self.math_problems)]
         self.current_math_answer = problem["answer"]
         self.math_label.config(text=problem["question"])
@@ -215,7 +220,6 @@ class TrolleyGame (object):
                 self.utilitarian_button.config(state=NORMAL)
                 self.deontological_button.config(state=NORMAL)
                 self.challenge_button.config(state=DISABLED)
-                self.update_timer()
             else:
                 self.math_feedback.config(text="Incorrect. Try again.")
                 self.math_entry.delete(0, END)
