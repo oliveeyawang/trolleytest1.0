@@ -1,6 +1,6 @@
 from tkinter import *
 
-#2:30am May 8, 2025 Olivia
+#2:30-4:30am May 8, 2025 Olivia
 #working on track tracking/flowchart user choices affecting the final score bar
 #will do a second pass b/c it's not continuous gameplay yet
 
