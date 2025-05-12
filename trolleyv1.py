@@ -1,9 +1,10 @@
 from tkinter import *
 import random
 
-#2:30-4:30am May 8, 2025 Olivia
-#working on track tracking/flowchart user choices affecting the final score bar
-#will do a second pass b/c it's not continuous gameplay yet
+#2:30- May 12, 2025 Olivia
+#worked on stroop test
+#worked on UI design
+
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
     
@@ -32,6 +33,7 @@ class TrackNode: #each node represents each trolley problem presented to the use
 
 class TrolleyGame(object): 
     def __init__(self, root):
+        self.choices_enabled = False
         self.root = root
         self.root.title("A Trolley Problem Game")
         self.root.attributes('-fullscreen', True)
@@ -85,22 +87,27 @@ class TrolleyGame(object):
             {"word": "RED", "color": "blue", "correct": "blue"},
             {"word": "GREEN", "color": "red", "correct": "red"},
             {"word": "BLUE", "color": "green", "correct": "green"},
-            {"word": "YELLOW", "color": "#DAA520", "correct": "yellow"},
-            {"word": "PURPLE", "color": "#DAA520", "correct": "yellow"},
-            {"word": "BLACK", "color": "#FF8C00", "correct": "orange"},
-            {"word": "ORANGE", "color": "black", "correct": "black"}
+            {"word": "YELLOW", "color": "purple", "correct": "purple"},
+            {"word": "PURPLE", "color": "yellow", "correct": "yellow"},
+            {"word": "BLACK", "color": "orange", "correct": "orange"},
+            {"word": "ORANGE", "color": "black", "correct": "black"},
+            {"word": "WHITE", "color": "green", "correct": "green"},
+            {"word": "GRAY", "color": "red", "correct": "red"},
+            {"word": "BROWN", "color": "blue", "correct": "blue"}
         ]
 
         # Create all frames
         self.start_frame = Frame(self.root)
         self.problem_frame = Frame(self.root)
         self.math_frame = Frame(self.root)
+        self.stroop_frame = Frame(self.root)
         self.result_frame = Frame(self.root)
 
         # Setup all screens
         self.setup_start_screen()
         self.setup_problem_screen()
         self.setup_math_screen()
+        self.setup_stroop_screen() 
         self.setup_result_screen()
 
         self.show_start_screen()
@@ -117,18 +124,29 @@ class TrolleyGame(object):
         title_label.grid(row=6, column=5, columnspan=20, pady=20)
 
         # Centered start button
-        start_button = Button(self.start_frame, text="Begin the Test", font=("Helvetica", 20),
-            command=self.start_game, bg="#4CAF50", fg="white", padx=20, pady=10)
+        start_button = Label(self.start_frame, text="Begin the Test",
+                     font=("Helvetica", 20), bg="#a0fc8d", fg="black",
+                     padx=20, pady=10, cursor="hand2")
         start_button.grid(row=10, column=10, columnspan=10, pady=28)
 
+        start_button.bind("<Button-1>", lambda e: self.start_game())
+        start_button.bind("<Enter>", lambda e: start_button.config(bg="#90e37a"))
+        start_button.bind("<Leave>", lambda e: start_button.config(bg="#a0fc8d"))
+
         # Centered exit button
-        exit_button = Button(self.start_frame, text="Exit", font=("Helvetica", 16),
-            command=lambda: self.root.attributes('-fullscreen', False))
+        exit_button = Label(self.start_frame, text="Exit", font=("Helvetica", 16),
+                    bg="#ff776d", fg="black", padx=20, pady=10, cursor="hand2")
         exit_button.grid(row=15, column=13, columnspan=4)
+
+        exit_button.bind("<Button-1>", lambda e: self.root.attributes('-fullscreen', False))
+        exit_button.bind("<Enter>", lambda e: exit_button.config(bg="#e4665d"))
+        exit_button.bind("<Leave>", lambda e: exit_button.config(bg="#ff776d"))
 
     def setup_problem_screen(self):
         self.problem_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
         self.problem_frame.grid_remove()  # Hide it first
+        self.feedback_label = Label(self.problem_frame, text="", font=("Helvetica", 14), fg="red")
+        self.feedback_label.grid(row=20, column=10, columnspan=10)
 
         for i in range(30):  
             self.problem_frame.columnconfigure(i, weight=1)
@@ -155,18 +173,39 @@ class TrolleyGame(object):
         self.challenge_button.grid(row=10, column=10, columnspan=10, pady=10)
 
        # Centered choice buttons
-        self.switch_button = Button(self.problem_frame, text="Switch Tracks", font=("Helvetica", 16),
-            command=lambda: self.make_choice(True),
-            bg="#2196F3", fg="white", padx=15, pady=8)
-        self.switch_button.grid(row=15, column=7, columnspan=6, pady=20)
+        # Stay Button
+        self.stay_button = Label(self.problem_frame, text="Stay on Track", font=("Helvetica", 16),
+                         fg="black", bg="#8afcfd", padx=15, pady=8, cursor="hand2")
+        self.stay_button.grid(row=15, column=7, columnspan=6, pady=20)
 
-        self.stay_button = Button(self.problem_frame, text="Stay on Track", font=("Helvetica", 16),
-            command=lambda: self.make_choice(False),
-            bg="#FF5722", fg="white", padx=15, pady=8)
-        self.stay_button.grid(row=15, column=17, columnspan=6, pady=20)
+        self.stay_button.bind("<Button-1>", self.handle_stay_click)
+        self.stay_button.bind("<Enter>", lambda e: self.stay_button.config(bg="#75d7d8") if self.choices_enabled else None)
+        self.stay_button.bind("<Leave>", lambda e: self.stay_button.config(bg="#8afcfd") if self.choices_enabled else self.stay_button.config(bg="#cccccc"))
 
-        self.switch_button.config(state=DISABLED)
-        self.stay_button.config(state=DISABLED)
+        # Switch Button
+        self.switch_button = Label(self.problem_frame, text="Switch Tracks", font=("Helvetica", 16),
+                           fg="black", bg="#f291de", padx=15, pady=8, cursor="hand2")
+        self.switch_button.grid(row=15, column=17, columnspan=6, pady=20)
+
+        self.switch_button.bind("<Button-1>", self.handle_switch_click)
+        self.switch_button.bind("<Enter>", lambda e: self.switch_button.config(bg="#c0469e") if self.choices_enabled else None)
+        self.switch_button.bind("<Leave>", lambda e: self.switch_button.config(bg="#f28bde") if self.choices_enabled else self.switch_button.config(bg="#cccccc"))
+
+    def handle_stay_click(self, event=None):
+            print("Stay clicked")
+            self.fake_button_click(False)
+
+    def handle_switch_click(self, event=None):
+            print("Switch clicked")
+            self.fake_button_click(True)
+            
+    def fake_button_click(self, switch):
+        if self.choices_enabled:
+            self.feedback_label.config(text="")
+            self.make_choice(switch)
+        else:
+            self.feedback_label.config(text="You must complete the task first.")
+            self.root.after(2000, lambda: self.feedback_label.config(text=""))
 
     def setup_math_screen(self):
         self.math_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
@@ -193,6 +232,58 @@ class TrolleyGame(object):
 
         self.submit_button = Button(self.math_frame, text="Submit", font=("Helvetica", 16), command=self.check_math_answer)
         self.submit_button.grid(row=14, column=12, columnspan=6, pady=10)
+
+    def setup_stroop_screen(self):
+        # New dedicated screen for the Stroop test with color buttons
+        self.stroop_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
+        self.stroop_frame.grid_remove()
+        
+        for i in range(30):  
+            self.stroop_frame.columnconfigure(i, weight=1)
+            self.stroop_frame.rowconfigure(i, weight=1)
+        
+        # Instruction label
+        instruction_text = "Name the COLOR of the text, not the word itself."
+        self.stroop_instruction = Label(self.stroop_frame, text=instruction_text, font=("Helvetica", 16))
+        self.stroop_instruction.grid(row=2, column=5, columnspan=20, pady=10)
+        
+        # Stroop test title
+        self.stroop_title = Label(self.stroop_frame, text="Stroop Color Test", font=("Helvetica", 24, "bold"))
+        self.stroop_title.grid(row=4, column=5, columnspan=20, pady=10)
+        
+        # Stroop word display (large)
+        self.stroop_word = Label(self.stroop_frame, text="", font=("Helvetica", 72, "bold"))
+        self.stroop_word.grid(row=8, column=5, columnspan=20, pady=30)
+        
+        # Color buttons frame
+        color_frame = Frame(self.stroop_frame)
+        color_frame.grid(row=15, column=5, columnspan=20, pady=20)
+        
+        # Create color buttons
+        self.color_buttons = {}
+        colors = ["red", "blue", "green", "yellow", "purple", "orange", "black"]
+        color_names = ["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Black"]
+        
+        for i, (color, name) in enumerate(zip(colors, color_names)):
+            btn = Button(color_frame, text=name, bg=color, 
+                      width=8, height=2, font=("Helvetica", 12),
+                      command=lambda c=color: self.check_stroop_answer(c))
+            
+            # Make text white for dark backgrounds
+            if color in ["blue", "purple", "black"]:
+                btn.config(fg="white")
+                
+            btn.grid(row=0, column=i, padx=5)
+            self.color_buttons[color] = btn
+        
+        # Feedback label
+        self.stroop_feedback = Label(self.stroop_frame, text="", font=("Helvetica", 16))
+        self.stroop_feedback.grid(row=18, column=5, columnspan=20, pady=10)
+        
+        # Timer for Stroop test
+        self.stroop_timer_label = Label(self.stroop_frame, text="Time: 10", font=("Helvetica", 16))
+        self.stroop_timer_label.grid(row=1, column=28, columnspan=2, pady=10, padx=10, sticky="ne")
+
 
     def setup_result_screen(self):
         self.result_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
@@ -267,8 +358,9 @@ class TrolleyGame(object):
             self.track_status.config(text=f"Currently on {self.current_track.upper()} track")
             
             # Reset button states
-            self.switch_button.config(state=DISABLED)
-            self.stay_button.config(state=DISABLED)
+            self.choices_enabled = False
+            self.stay_button.config(bg="#cccccc")
+            self.switch_button.config(bg="#cccccc")
             self.challenge_button.config(state=NORMAL)
 
             self.start_timer()
@@ -377,25 +469,35 @@ class TrolleyGame(object):
         self.current_problem += 1
         self.load_problem()
 
+    def return_to_problem(self):
+        self.stroop_frame.grid_remove()
+        self.problem_frame.grid()
+        self.choices_enabled = True
+        self.switch_button.config(bg="#f291de")
+        self.stay_button.config(bg="#8afcfd")
+        self.challenge_button.config(state=DISABLED)
+
     def show_math_challenge(self):
         self.problem_frame.grid_remove()
-        self.math_frame.grid()
-
         task_type = random.choice(["math", "stroop"])
         self.current_task_type = task_type
-        self.task_entry.delete(0, END)
-        self.task_feedback.config(text="")
 
         if task_type == "math":
+            self.math_frame.grid()
+            self.task_entry.delete(0, END)
+            self.task_feedback.config(text="")
             self.task_type_label.config(text="Math Task", fg="blue")
             problem = generate_random_math_problem()
             self.current_math_answer = problem["answer"]
             self.task_label.config(text=problem["question"], fg="black")
         else:
-            self.task_type_label.config(text="Stroop Task")
+            self.stroop_frame.grid()
+            self.stroop_feedback.config(text="")
             stroop = random.choice(self.stroop_tasks)
             self.current_stroop_answer = stroop["correct"]
-            self.task_label.config(text=stroop["word"], fg=stroop["color"])
+            self.stroop_word.config(text=stroop["word"], fg=stroop["color"])
+            self.start_stroop_timer()
+
 
     def check_math_answer(self):
         user_input = self.task_entry.get().strip()
@@ -418,11 +520,32 @@ class TrolleyGame(object):
                 self.task_feedback.config(text="Stroop mismatch. Try again.")
                 self.task_entry.delete(0, END)
 
+    def start_stroop_timer(self):
+        self.stroop_time_left = 10
+        self.update_stroop_timer()
+
+    def update_stroop_timer(self):
+        self.stroop_timer_label.config(text=f"Time: {self.stroop_time_left}")
+        if self.stroop_time_left <= 0:
+            self.stroop_feedback.config(text="Too slow!")
+            self.root.after(1000, self.return_to_problem)
+        else:
+            self.stroop_time_left -= 1
+            self.root.after(1000, self.update_stroop_timer)
+    def check_stroop_answer(self, selected_color):
+        if selected_color == self.current_stroop_answer:
+            self.return_to_problem()
+        else:
+            self.stroop_feedback.config(text="Wrong color. Try again.")
+
     def complete_challenge(self):
         self.math_frame.grid_remove()
         self.problem_frame.grid()
-        self.switch_button.config(state=NORMAL)
-        self.stay_button.config(state=NORMAL)
+        self.choices_enabled = True
+        self.stay_button.config(bg="#8afcfd")
+        self.switch_button.config(bg="#f291de")
+        #self.switch_button.config(state=NORMAL)
+        #self.stay_button.config(state=NORMAL)
         self.challenge_button.config(state=DISABLED)
 
     def update_progress_bar(self):
