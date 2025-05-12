@@ -2,11 +2,10 @@ from tkinter import *
 import random
 from PIL import Image, ImageTk
 
-#2:30-7am May 12, 2025 Olivia
-#worked on stroop test
-#worked on UI design 
-#button function custom color on macOS doesn't work, so used label functions
-#debugging math test
+#7am-8am May 12, 2025 Olivia
+#will illustrations/visuals
+#deleted stroop timer
+#just one 60 second timer per problem 
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -41,6 +40,7 @@ class TrolleyGame(object):
         self.root.title("A Trolley Problem Game")
         self.root.attributes('-fullscreen', True)
 
+
         # scoring system 
         self.utilitarian_score = 0
         self.deontological_score = 0
@@ -51,8 +51,9 @@ class TrolleyGame(object):
         self.previous_track = None
 
         # timer variables
-        self.time_left = 60
-        self.timer_id = None
+        self.timer_label = Label(self.root, text="Time: 60", font=("Helvetica", 16))
+        self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")  # this floats it top right
+
         
         # Grid to work with
         for i in range(30):  
@@ -104,13 +105,17 @@ class TrolleyGame(object):
         self.problem_frame = Frame(self.root)
         self.math_frame = Frame(self.root)
         self.stroop_frame = Frame(self.root)
+        self.decision_frame = Frame(self.root)
         self.result_frame = Frame(self.root)
+        self.timer_id = None
+
 
         # Setup all screens
         self.setup_start_screen()
         self.setup_problem_screen()
         self.setup_math_screen()
         self.setup_stroop_screen() 
+        self.setup_decision_screen()
         self.setup_result_screen()
 
         self.show_start_screen()
@@ -174,9 +179,6 @@ class TrolleyGame(object):
             self.problem_frame.columnconfigure(i, weight=1)
             self.problem_frame.rowconfigure(i, weight=1)
 
-        # Timer in top right
-        self.timer_label = Label(self.problem_frame, text="Time: 60", font=("Helvetica", 16))
-        self.timer_label.grid(row=1, column=28, columnspan=2, pady=10, padx=10, sticky="ne")
 
         # Centered problem description
         self.problem_label = Label(self.problem_frame, text="", font=("Helvetica", 18), 
@@ -248,6 +250,8 @@ class TrolleyGame(object):
     def setup_math_screen(self):
         self.math_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
         self.math_frame.grid_remove()
+        self.timer_label.lift()
+
 
         for i in range(30):  
             self.math_frame.columnconfigure(i, weight=1)
@@ -269,20 +273,22 @@ class TrolleyGame(object):
         self.task_feedback.grid(row=12, column=10, columnspan=10)
 
         self.submit_button = Label(self.math_frame, text="Submit",
-                           font=("Helvetica", 16), bg="#a0fc8d", fg="black",
+                           font=("Helvetica", 16), bg="#FFC107", fg="black",
                            padx=15, pady=8, cursor="hand2")
         self.submit_button.grid(row=14, column=12, columnspan=6, pady=10)
 
         # Event bindings
         self.submit_button.bind("<Button-1>", lambda e: self.check_math_answer())
-        self.submit_button.bind("<Enter>", lambda e: self.submit_button.config(bg="#90e37a"))
-        self.submit_button.bind("<Leave>", lambda e: self.submit_button.config(bg="#a0fc8d"))
+        self.submit_button.bind("<Enter>", lambda e: self.submit_button.config(bg="#e6ac06"))
+        self.submit_button.bind("<Leave>", lambda e: self.submit_button.config(bg="#FFC107"))
 
 
     def setup_stroop_screen(self):
         # New dedicated screen for the Stroop test with color buttons
         self.stroop_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
         self.stroop_frame.grid_remove()
+        self.timer_label.lift()
+
         
         for i in range(30):  
             self.stroop_frame.columnconfigure(i, weight=1)
@@ -340,10 +346,22 @@ class TrolleyGame(object):
         # Feedback label
         self.stroop_feedback = Label(self.stroop_frame, text="", font=("Helvetica", 16))
         self.stroop_feedback.grid(row=18, column=5, columnspan=20, pady=10)
-        
-        # Timer for Stroop test
-        self.stroop_timer_label = Label(self.stroop_frame, text="Time: 10", font=("Helvetica", 16))
-        self.stroop_timer_label.grid(row=1, column=28, columnspan=2, pady=10, padx=10, sticky="ne")
+
+
+    #shows the user a screen containing the choice they just made
+    def setup_decision_screen(self):
+        self.decision_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
+        self.decision_frame.grid_remove()
+
+        for i in range(30):
+            self.decision_frame.columnconfigure(i, weight=1)
+            self.decision_frame.rowconfigure(i, weight=1)
+
+        self.decision_label = Label(self.decision_frame, text="", font=("Helvetica", 20), wraplength=900, justify="center")
+        self.decision_label.grid(row=5, column=5, columnspan=20, pady=30)
+
+        self.decision_image = Label(self.decision_frame)
+        self.decision_image.grid(row=10, column=10, columnspan=10)
 
 
     def setup_result_screen(self):
@@ -385,6 +403,7 @@ class TrolleyGame(object):
         self.math_frame.grid_remove()
         self.result_frame.grid_remove()
         self.start_frame.grid()
+        self.timer_label.place_forget()
 
 
 
@@ -392,6 +411,7 @@ class TrolleyGame(object):
         self.start_frame.grid_remove()
         self.problem_frame.grid()
         # Restart scores when game restarts
+        self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
         self.utilitarian_score = 0
         self.deontological_score = 0
         self.conflicted_score = 0
@@ -433,6 +453,8 @@ class TrolleyGame(object):
             
             # Show result screen
             self.show_results()
+        self.timer_label.lift()
+
 
 
     def show_results(self):
@@ -471,6 +493,7 @@ class TrolleyGame(object):
         self.result_frame.grid()
 
     def start_timer(self):
+        self.timer_id = None
         if self.timer_id is not None:
             self.root.after_cancel(self.timer_id)
 
@@ -478,12 +501,39 @@ class TrolleyGame(object):
         self.update_timer()
 
     def update_timer(self):
-        self.timer_label.config(text=f"Time: {self.time_left}")
         if self.time_left <= 0:
-            self.make_choice("deontological")
+            self.out_of_time()
         else:
-            self.time_left -= 1
-            self.timer_id = self.root.after(1000, self.update_timer)
+            color = "red" if self.time_left <= 10 else "black"
+            font = ("Helvetica", 18, "bold") if self.time_left <= 10 else ("Helvetica", 16)
+        
+        self.timer_label.config(text=f"Time: {self.time_left}", fg=color, font=font)
+        
+        self.time_left -= 1
+        self.timer_id = self.root.after(1000, self.update_timer)
+
+    #if user runs out of time on choice
+    def out_of_time(self):
+        self.stroop_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.problem_frame.grid_remove()
+
+        # Treat as default "stay"
+        node = self.track_nodes[self.current_problem]
+        killed = node.left if self.current_track == "left" else node.right
+
+        self.track_history.append({
+            "switched": False,
+            "killed": killed,
+            "red_path": node.red_path
+        })
+
+        if node.reward == "utilitarian":
+            self.deontological_score += 1
+        else:
+            self.utilitarian_score += 1
+
+        self.show_decision_screen(False, killed)
 
     def make_choice(self, switch):
         if self.timer_id:
@@ -528,6 +578,37 @@ class TrolleyGame(object):
 
         # Move to next problem
         self.current_problem += 1
+        self.show_decision_screen(switch, killed_group)
+    
+    def show_decision_screen(self, switched, killed):
+        self.problem_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.stroop_frame.grid_remove()
+    
+        message = f"You {'switched tracks' if switched else 'stayed on the current track'}.\n"
+        message += f"You killed: {killed}"
+
+        self.decision_label.config(text=message)
+
+        # Show an image based on choice (use dummy for now)
+        img = PhotoImage(file="placeholder.png")  # Replace with actual image logic
+        self.decision_image.config(image=img)
+        self.decision_image.image = img  # keep reference
+        self.decision_frame.grid()
+
+        self.continue_button = Label(self.decision_frame, text="Continue",
+                             font=("Helvetica", 16), bg="#a0fc8d", fg="black",
+                             padx=15, pady=8, cursor="hand2")
+        self.continue_button.grid(row=20, column=13, columnspan=4)
+
+        self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+        self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#90e37a"))
+        self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#a0fc8d"))
+        
+
+    def next_problem(self):
+        self.decision_frame.grid_remove()
+        self.current_problem += 1
         self.load_problem()
 
     def return_to_problem(self):
@@ -558,7 +639,7 @@ class TrolleyGame(object):
             stroop = random.choice(self.stroop_tasks)
             self.current_stroop_answer = stroop["correct"]
             self.stroop_word.config(text=stroop["word"], fg=stroop["color"])
-            self.start_stroop_timer()
+            
 
 
     def check_math_answer(self):
@@ -582,18 +663,7 @@ class TrolleyGame(object):
                 self.task_feedback.config(text="Stroop mismatch. Try again.")
                 self.task_entry.delete(0, END)
 
-    def start_stroop_timer(self):
-        self.stroop_time_left = 10
-        self.update_stroop_timer()
 
-    def update_stroop_timer(self):
-        self.stroop_timer_label.config(text=f"Time: {self.stroop_time_left}")
-        if self.stroop_time_left <= 0:
-            self.stroop_feedback.config(text="Too slow!")
-            self.root.after(1000, self.return_to_problem)
-        else:
-            self.stroop_time_left -= 1
-            self.root.after(1000, self.update_stroop_timer)
     def check_stroop_answer(self, selected_color):
         if selected_color == self.current_stroop_answer:
             self.return_to_problem()
