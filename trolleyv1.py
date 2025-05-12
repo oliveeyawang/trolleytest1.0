@@ -1,7 +1,7 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#repushing 8am changes cuz it didn't work the first time 
+#repushing 10am changes
 #8:30am-10am May 12, 2025 Olivia
 #added immediate feedback intermediate slide
 
