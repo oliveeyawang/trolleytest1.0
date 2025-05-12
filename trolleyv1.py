@@ -1,9 +1,12 @@
 from tkinter import *
 import random
+from PIL import Image, ImageTk
 
 #2:30- May 12, 2025 Olivia
 #worked on stroop test
-#worked on UI design
+#worked on UI design 
+#button function custom color on macOS doesn't work, so used label functions
+# debugging 
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -48,7 +51,7 @@ class TrolleyGame(object):
         self.previous_track = None
 
         # timer variables
-        self.time_left = 30
+        self.time_left = 60
         self.timer_id = None
         
         # Grid to work with
@@ -120,23 +123,42 @@ class TrolleyGame(object):
         self.start_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
 
         # Centered title
-        title_label = Label(self.start_frame, text="The Trolley Problem", font=("Helvetica", 36, "bold"))
+        title_label = Label(self.start_frame, text="The Trolley Problem Quiz", font=("Helvetica", 36, "bold"))
         title_label.grid(row=6, column=5, columnspan=20, pady=20)
+
+        # Load placeholder image
+        img = Image.open("placeholder.jpg")
+        img = img.resize((400, 250))  # Resize to fit your aesthetic despair
+        self.placeholder_photo = ImageTk.PhotoImage(img)
+
+        # Add to label
+        self.placeholder_label = Label(self.start_frame, image=self.placeholder_photo)
+        self.placeholder_label.grid(row=7, column=10, columnspan=10, pady=10)
+
+        #instructions
+        instructions = ("INSTRUCTIONS:\n"
+                "You will face 7 trolley dilemmas.\n"
+                "You will have 60 seconds to read each scenerio and make a decision.\n"
+                "The catch: To make any kind of choice, you first must complete a little task.\n"
+                "We WILL judge your morality! \n\n")
+        instruction_label = Label(self.start_frame, text=instructions, font=("Helvetica", 20), wraplength=700, justify="center")
+        instruction_label.grid(row=11, column=5, columnspan=20, pady=(10, 30))
 
         # Centered start button
         start_button = Label(self.start_frame, text="Begin the Test",
                      font=("Helvetica", 20), bg="#a0fc8d", fg="black",
                      padx=20, pady=10, cursor="hand2")
-        start_button.grid(row=10, column=10, columnspan=10, pady=28)
+        start_button.grid(row=12, column=10, columnspan=10, pady=28)
 
         start_button.bind("<Button-1>", lambda e: self.start_game())
         start_button.bind("<Enter>", lambda e: start_button.config(bg="#90e37a"))
         start_button.bind("<Leave>", lambda e: start_button.config(bg="#a0fc8d"))
 
+
         # Centered exit button
         exit_button = Label(self.start_frame, text="Exit", font=("Helvetica", 16),
                     bg="#ff776d", fg="black", padx=20, pady=10, cursor="hand2")
-        exit_button.grid(row=15, column=13, columnspan=4)
+        exit_button.grid(row=17, column=13, columnspan=4)
 
         exit_button.bind("<Button-1>", lambda e: self.root.attributes('-fullscreen', False))
         exit_button.bind("<Enter>", lambda e: exit_button.config(bg="#e4665d"))
@@ -166,15 +188,19 @@ class TrolleyGame(object):
                                  fg="#666666")
         self.track_status.grid(row=7, column=5, columnspan=20)
 
-        # Centered challenge button
-        self.challenge_button = Button(self.problem_frame, text="Complete Task First", 
-                                 font=("Helvetica", 14), command=self.show_math_challenge, 
-                                 bg="#FFC107", padx=10, pady=5)
+        #task button
+        self.challenge_button = Label(self.problem_frame, text="Complete Task First",
+                              font=("Helvetica", 14), bg="#FFC107", fg="black",
+                              padx=15, pady=8, cursor="hand2")
         self.challenge_button.grid(row=10, column=10, columnspan=10, pady=10)
 
-       # Centered choice buttons
+        self.challenge_button.bind("<Button-1>", lambda e: self.show_math_challenge())
+        self.challenge_button.bind("<Enter>", lambda e: self.challenge_button.config(bg="#e6ac06"))
+        self.challenge_button.bind("<Leave>", lambda e: self.challenge_button.config(bg="#FFC107"))
+
+        # Centered choice buttons
         # Stay Button
-        self.stay_button = Label(self.problem_frame, text="Stay on Track", font=("Helvetica", 16),
+        self.stay_button = Label(self.problem_frame, text="Stay on Current Track", font=("Helvetica", 16),
                          fg="black", bg="#8afcfd", padx=15, pady=8, cursor="hand2")
         self.stay_button.grid(row=15, column=7, columnspan=6, pady=20)
 
@@ -198,7 +224,19 @@ class TrolleyGame(object):
     def handle_switch_click(self, event=None):
             print("Switch clicked")
             self.fake_button_click(True)
-            
+
+    def disable_challenge_button(self):
+        self.challenge_button.unbind("<Button-1>")
+        self.challenge_button.unbind("<Enter>")
+        self.challenge_button.unbind("<Leave>")
+        self.challenge_button.config(bg="#cccccc", fg="#777777", cursor="arrow")
+
+    def enable_challenge_button(self):
+        self.challenge_button.bind("<Button-1>", lambda e: self.show_math_challenge())
+        self.challenge_button.bind("<Enter>", lambda e: self.challenge_button.config(bg="#e6ac06"))
+        self.challenge_button.bind("<Leave>", lambda e: self.challenge_button.config(bg="#FFC107"))
+        self.challenge_button.config(bg="#FFC107", fg="black", cursor="hand2")
+      
     def fake_button_click(self, switch):
         if self.choices_enabled:
             self.feedback_label.config(text="")
@@ -361,7 +399,7 @@ class TrolleyGame(object):
             self.choices_enabled = False
             self.stay_button.config(bg="#cccccc")
             self.switch_button.config(bg="#cccccc")
-            self.challenge_button.config(state=NORMAL)
+            self.enable_challenge_button()
 
             self.start_timer()
         else:
@@ -475,7 +513,7 @@ class TrolleyGame(object):
         self.choices_enabled = True
         self.switch_button.config(bg="#f291de")
         self.stay_button.config(bg="#8afcfd")
-        self.challenge_button.config(state=DISABLED)
+        self.disable_challenge_button()
 
     def show_math_challenge(self):
         self.problem_frame.grid_remove()
@@ -544,9 +582,7 @@ class TrolleyGame(object):
         self.choices_enabled = True
         self.stay_button.config(bg="#8afcfd")
         self.switch_button.config(bg="#f291de")
-        #self.switch_button.config(state=NORMAL)
-        #self.stay_button.config(state=NORMAL)
-        self.challenge_button.config(state=DISABLED)
+        self.disable_challenge_button()
 
     def update_progress_bar(self):
         total = self.utilitarian_score + self.deontological_score
