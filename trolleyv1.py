@@ -2,10 +2,8 @@ from tkinter import *
 import random
 from PIL import Image, ImageTk
 #repushing 8am changes cuz it didn't work the first time 
-#7am-8am May 12, 2025 Olivia
-#will illustrations/visuals
-#deleted stroop timer
-#just one 60 second timer per problem 
+#8:30am-10am May 12, 2025 Olivia
+#added immediate feedback intermediate slide
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -422,22 +420,36 @@ class TrolleyGame(object):
         self.load_problem()
 
     def load_problem(self):
+        # Hide everything 
+        self.start_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.stroop_frame.grid_remove()
+        self.decision_frame.grid_remove()
+        self.result_frame.grid_remove()
+
         if self.current_problem < len(self.track_nodes):
+            #troubleshooting
+            self.problem_frame.grid()
+            self.problem_frame.tkraise()
+            self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
+            self.timer_label.lift()
+
+            # TEST visibility
+            # Load the track node
             node = self.track_nodes[self.current_problem]
-            
-            # Determine what's on current track and alternative track
+
+            # Build description
             current_side_group = node.left if self.current_track == "left" else node.right
             other_side_group = node.right if self.current_track == "left" else node.left
-            
-            # Create description based on track
+
             description = f"The trolley is headed toward {current_side_group}.\n"
             description += f"You can switch tracks to divert it toward {other_side_group}.\n"
             description += "What will you do?"
-            
+
             # Update UI
             self.problem_label.config(text=description)
             self.track_status.config(text=f"Currently on {self.current_track.upper()} track")
-            
+
             # Reset button states
             self.choices_enabled = False
             self.stay_button.config(bg="#cccccc")
@@ -446,18 +458,14 @@ class TrolleyGame(object):
 
             self.start_timer()
         else:
-            # Hide all other frames
+            print("No more problems. Showing results.")
             self.problem_frame.grid_remove()
-            self.math_frame.grid_remove()
-            self.start_frame.grid_remove()
-            
-            # Show result screen
             self.show_results()
-        self.timer_label.lift()
-
 
 
     def show_results(self):
+        self.result_frame.grid()
+        print("Result screen displayed")
         # Build summary text
         summary = f"Congratulations! You've completed all dilemmas. We've concluded you have questionable morals!\n\n"
         summary += f"Utilitarian choices: {self.utilitarian_score}\n"
@@ -576,13 +584,13 @@ class TrolleyGame(object):
         print(f"Killed: {killed_group}")
         print(f"Utilitarian: {self.utilitarian_score}, Deontological: {self.deontological_score}, Conflicted: {self.conflicted_score}")
 
-        # Move to next problem
-        self.current_problem += 1
+        # shows the user the immediate conseqeunce of their choice
         self.show_decision_screen(switch, killed_group)
     
     def show_decision_screen(self, switched, killed):
         self.problem_frame.grid_remove()
         self.math_frame.grid_remove()
+        self.timer_label.place_forget()
         self.stroop_frame.grid_remove()
     
         message = f"You {'switched tracks' if switched else 'stayed on the current track'}.\n"
@@ -591,23 +599,30 @@ class TrolleyGame(object):
         self.decision_label.config(text=message)
 
         # Show an image based on choice (use dummy for now)
-        img = PhotoImage(file="placeholder.png")  # Replace with actual image logic
-        self.decision_image.config(image=img)
-        self.decision_image.image = img  # keep reference
+
+        img = Image.open("placeholder.png")  # Replace with actual image logic
+        img = img.resize((400, 250))
+        photo = ImageTk.PhotoImage(img)
+
+        self.decision_image.config(image=photo)
+        self.decision_image.image = photo  # keep reference
         self.decision_frame.grid()
 
         self.continue_button = Label(self.decision_frame, text="Continue",
-                             font=("Helvetica", 16), bg="#a0fc8d", fg="black",
+                             font=("Helvetica", 16), bg="#FFC107", fg="black",
                              padx=15, pady=8, cursor="hand2")
-        self.continue_button.grid(row=20, column=13, columnspan=4)
+        self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
 
         self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
-        self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#90e37a"))
-        self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#a0fc8d"))
+        self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#e6ac06"))
+        self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#FFC107"))
         
 
     def next_problem(self):
+        #troubleshooting
         self.decision_frame.grid_remove()
+        self.problem_frame.grid()
+        self.problem_frame.tkraise()
         self.current_problem += 1
         self.load_problem()
 
