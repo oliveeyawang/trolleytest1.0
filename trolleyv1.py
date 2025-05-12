@@ -2,11 +2,11 @@ from tkinter import *
 import random
 from PIL import Image, ImageTk
 
-#2:30- May 12, 2025 Olivia
+#2:30-7am May 12, 2025 Olivia
 #worked on stroop test
 #worked on UI design 
 #button function custom color on macOS doesn't work, so used label functions
-# debugging 
+#debugging math test
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -175,7 +175,7 @@ class TrolleyGame(object):
             self.problem_frame.rowconfigure(i, weight=1)
 
         # Timer in top right
-        self.timer_label = Label(self.problem_frame, text="Time: 30", font=("Helvetica", 16))
+        self.timer_label = Label(self.problem_frame, text="Time: 60", font=("Helvetica", 16))
         self.timer_label.grid(row=1, column=28, columnspan=2, pady=10, padx=10, sticky="ne")
 
         # Centered problem description
@@ -268,8 +268,16 @@ class TrolleyGame(object):
         self.task_feedback = Label(self.math_frame, text="", font=("Helvetica", 16), fg="red")
         self.task_feedback.grid(row=12, column=10, columnspan=10)
 
-        self.submit_button = Button(self.math_frame, text="Submit", font=("Helvetica", 16), command=self.check_math_answer)
+        self.submit_button = Label(self.math_frame, text="Submit",
+                           font=("Helvetica", 16), bg="#a0fc8d", fg="black",
+                           padx=15, pady=8, cursor="hand2")
         self.submit_button.grid(row=14, column=12, columnspan=6, pady=10)
+
+        # Event bindings
+        self.submit_button.bind("<Button-1>", lambda e: self.check_math_answer())
+        self.submit_button.bind("<Enter>", lambda e: self.submit_button.config(bg="#90e37a"))
+        self.submit_button.bind("<Leave>", lambda e: self.submit_button.config(bg="#a0fc8d"))
+
 
     def setup_stroop_screen(self):
         # New dedicated screen for the Stroop test with color buttons
@@ -303,16 +311,31 @@ class TrolleyGame(object):
         color_names = ["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Black"]
         
         for i, (color, name) in enumerate(zip(colors, color_names)):
-            btn = Button(color_frame, text=name, bg=color, 
-                      width=8, height=2, font=("Helvetica", 12),
-                      command=lambda c=color: self.check_stroop_answer(c))
-            
-            # Make text white for dark backgrounds
-            if color in ["blue", "purple", "black"]:
+            btn = Label(color_frame, text=name, bg=color, width=8, height=2,
+                        font=("Helvetica", 12), cursor="hand2")
+
+            # Fix text color for dark backgrounds
+            if color in ["blue", "purple", "black","green"]:
                 btn.config(fg="white")
-                
+            else:
+                btn.config(fg="black")
+
+            # Click binding
+            btn.bind("<Button-1>", lambda e, c=color: self.check_stroop_answer(c))
+
+            # Optional hover (if you want it to darken slightly)
+            def on_enter(e, widget=btn):
+                widget.config(relief="sunken")
+
+            def on_leave(e, widget=btn):
+                widget.config(relief="flat")
+
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+
             btn.grid(row=0, column=i, padx=5)
             self.color_buttons[color] = btn
+
         
         # Feedback label
         self.stroop_feedback = Label(self.stroop_frame, text="", font=("Helvetica", 16))
@@ -451,7 +474,7 @@ class TrolleyGame(object):
         if self.timer_id is not None:
             self.root.after_cancel(self.timer_id)
 
-        self.time_left = 30
+        self.time_left = 60
         self.update_timer()
 
     def update_timer(self):
@@ -523,6 +546,7 @@ class TrolleyGame(object):
         if task_type == "math":
             self.math_frame.grid()
             self.task_entry.delete(0, END)
+            self.task_entry.focus_set()
             self.task_feedback.config(text="")
             self.task_type_label.config(text="Math Task", fg="blue")
             problem = generate_random_math_problem()
