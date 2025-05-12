@@ -2,7 +2,7 @@ from tkinter import *
 import random
 from PIL import Image, ImageTk
 #repushing 10am changes
-#8:30am-10am May 12, 2025 Olivia
+#10am-10:45am May 12, 2025 Olivia
 #added immediate feedback intermediate slide
 
 def generate_random_math_problem():
@@ -24,11 +24,12 @@ def generate_random_math_problem():
 
         return {"question": question, "answer": answer}
 class TrackNode: #each node represents each trolley problem presented to the user
-    def __init__(self, left_group, right_group, reward_type, red_path=False):
-        self.left = left_group #the "left" track with some set group of people on it
-        self.right = right_group #the "right" track with some set group of people on it 
-        self.reward = reward_type  # classifies which choice is "utilitarian" or "deontological"
-        self.red_path = red_path #if the path is particularly morally challenging/illogical
+    def __init__(self, bottom_group, top_group, reward_type, red_path=False):
+        
+        self.bottom = bottom_group #the bottom track with a set group of people on it
+        self.top = top_group #the right track with a set group of people on it 
+        self.reward = reward_type # classifies which choice is "utilitarian" or "deontological"
+        self.red_path = red_path  #if the path is particularly morally challenging/illogical
         #add self.danger_path = danger_path #choices that identify psycho edge cases??
 
 class TrolleyGame(object): 
@@ -45,7 +46,7 @@ class TrolleyGame(object):
         self.conflicted_score = 0 # i added this, 0 is baseline conflicted human
 
         # track system variables
-        self.current_track = "left"  # start on left track
+        self.current_track = "bottom"  # start on bottom track
         self.previous_track = None
 
         # timer variables
@@ -68,9 +69,9 @@ class TrolleyGame(object):
         # this flow needs a lot of work...because the philosophical classification of each scenerio depends 
         # on which track they're currently on and their past choices
         self.track_nodes = [
-            TrackNode("5 people", "1 person", "utilitarian"),
-            TrackNode("a family member", "5 people", "deontological", red_path=True),
-            TrackNode("5 of your closest friends", "a baby", "deontological"),
+            TrackNode("5 people", "1 person", "utilitarian"), # Stay = deontological (kill 5), Switch = utilitarian (kill 1)
+            TrackNode("a family member", "5 people", "deontological", red_path=True), # Stay = kill family, Switch = kill 5
+            TrackNode("5 of your closest friends", "a baby", "deontological"), # Stay = kill friends, Switch = kill baby
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
             TrackNode("nothing", "a bomb (will stop the train but kill everyone inside it)", "deontological"),
@@ -346,6 +347,31 @@ class TrolleyGame(object):
         self.stroop_feedback.grid(row=18, column=5, columnspan=20, pady=10)
 
 
+    #for robust user choice tracking
+    def evaluate_moral_alignment(self, node, switched):
+        # Determine which path the trolley ends up on after the decision
+        final_track = self.current_track if not switched else ("top" if self.current_track == "bottom" else "bottom")
+        killed_group = node.top if final_track == "top" else node.bottom
+
+        # Base scoring
+        if node.red_path:
+            # remove from whichever philosophy point just got added
+            if node.reward == "utilitarian" and switched:
+                self.utilitarian_score -= 1
+            elif node.reward == "deontological" and not switched:
+                self.deontological_score -= 1
+            self.conflicted_score += 1  # or keep as penalty bucket
+        elif "family" in killed_group.lower() or "partner" in killed_group.lower() or "child" in killed_group.lower():
+            self.conflicted_score += 1  # this is where we’d trigger the psycho track if we had it
+        elif node.reward == "utilitarian" and switched:
+            self.utilitarian_score += 1
+        elif node.reward == "deontological" and not switched:
+            self.deontological_score += 1
+        else:
+            self.conflicted_score += 1
+
+        return killed_group
+
     #shows the user a screen containing the choice they just made
     def setup_decision_screen(self):
         self.decision_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
@@ -414,7 +440,7 @@ class TrolleyGame(object):
         self.deontological_score = 0
         self.conflicted_score = 0
         self.current_problem = 0
-        self.current_track = "left"
+        self.current_track = "bottom"
         self.previous_track = None
         self.track_history = []
         self.load_problem()
@@ -439,8 +465,8 @@ class TrolleyGame(object):
             node = self.track_nodes[self.current_problem]
 
             # Build description
-            current_side_group = node.left if self.current_track == "left" else node.right
-            other_side_group = node.right if self.current_track == "left" else node.left
+            current_side_group = node.bottom if self.current_track == "bottom" else node.top
+            other_side_group = node.top if self.current_track == "bottom" else node.bottom
 
             description = f"The trolley is headed toward {current_side_group}.\n"
             description += f"You can switch tracks to divert it toward {other_side_group}.\n"
@@ -487,11 +513,11 @@ class TrolleyGame(object):
         self.track_history_text.delete(1.0, END)
         for i, history in enumerate(self.track_history):
             scenario = self.track_nodes[i]
-            left_group = scenario.left
-            right_group = scenario.right
+            bottom_group = scenario.bottom
+            top_group = scenario.top
             
             history_text = f"Scenario {i+1}: "
-            history_text += f"Left track: {left_group}, Right track: {right_group}\n"
+            history_text += f"Bottom track: {bottom_group}, Top track: {top_group}\n"
             history_text += f"Your choice: {'Switched' if history['switched'] else 'Stayed'} tracks\n"
             history_text += f"You killed: {history['killed']}\n\n"
             
@@ -528,7 +554,7 @@ class TrolleyGame(object):
 
         # Treat as default "stay"
         node = self.track_nodes[self.current_problem]
-        killed = node.left if self.current_track == "left" else node.right
+        killed = node.bottom if self.current_track == "bottom" else node.top
 
         self.track_history.append({
             "switched": False,
@@ -550,42 +576,26 @@ class TrolleyGame(object):
         node = self.track_nodes[self.current_problem]
         
         # Track the history of choices
-        killed_group = node.left if self.current_track == "left" else node.right
-        
-        # Store history for this scenario
+        # If user switched, flip the track
+        if switch:
+            self.previous_track = self.current_track
+            self.current_track = "top" if self.current_track == "bottom" else "bottom"
+
+        killed_group = self.evaluate_moral_alignment(node, switch)
+
+        # Log the decision
         self.track_history.append({
             "switched": switch,
             "killed": killed_group,
             "red_path": node.red_path
         })
-        
-        # Handle switching tracks
-        if switch:
-            self.previous_track = self.current_track
-            self.current_track = "right" if self.current_track == "left" else "left"
-            
-            # Check if this was a "red path" switch (ethically conflicted)
-            if node.red_path:
-                self.conflicted_score += 1
-            
-            # Update score based on reward type
-            if node.reward == "utilitarian":
-                self.utilitarian_score += 1
-            elif node.reward == "deontological":
-                self.deontological_score += 1
-        else:
-            # Not switching tracks
-            if node.reward == "utilitarian":
-                self.deontological_score += 1
-            elif node.reward == "deontological":
-                self.utilitarian_score += 1
-        
+
         print(f"Choice made: {'Switch' if switch else 'Stay'}")
         print(f"Killed: {killed_group}")
         print(f"Utilitarian: {self.utilitarian_score}, Deontological: {self.deontological_score}, Conflicted: {self.conflicted_score}")
 
-        # shows the user the immediate conseqeunce of their choice
         self.show_decision_screen(switch, killed_group)
+        
     
     def show_decision_screen(self, switched, killed):
         self.problem_frame.grid_remove()
