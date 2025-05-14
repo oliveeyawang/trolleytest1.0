@@ -1,8 +1,11 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#2am- May 14, 2025 Olivia
-#illustrations and design
+#7am-9am May 14, 2025 Olivia
+#added more specific illustrations
+#decision feedback
+#choice tracking
+#rolling the dice at assassin scenario
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -29,7 +32,7 @@ class TrackNode: #each node represents each trolley problem presented to the use
         self.top = top_group #the right track with a set group of people on it 
         self.reward = reward_type # classifies which choice is "utilitarian" or "deontological"
         self.red_path = red_path  #if the path is particularly morally challenging/illogical
-        #add self.danger_path = danger_path #choices that identify psycho edge cases??
+        
 
 class TrolleyGame(object): 
     def __init__(self, root):
@@ -52,7 +55,6 @@ class TrolleyGame(object):
         self.timer_label = Label(self.root, text="Time: 60", font=("Helvetica", 16), bg="white")
         self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")  # this floats it top right
 
-        
         # Grid to work with
         for i in range(30):  
             self.root.columnconfigure(i, weight=1)
@@ -79,13 +81,37 @@ class TrolleyGame(object):
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
-        # Load all problem illustrations named 1.png to 8.png
-        self.problem_images = []
-        for i in range(1, 9):  # 1 through 8 inclusive
-            img = Image.open(f"{i}.jpg")
-            img = img.resize((800, 500), Image.Resampling.LANCZOS)
-            photo = ImageTk.PhotoImage(img)
-            self.problem_images.append(photo)
+        # Load decision feedback images (DFTop1–8, DFBottom1–8)
+        self.decision_images = {}  # e.g. {"DFTop1": PhotoImage, "DFBottom1": PhotoImage}
+        self.flow_images = {}
+        for i in range(1, 9):
+            for prefix in ["DFTop", "DFBottom"]:
+                key = f"{prefix}{i}"
+                try:
+                    img = Image.open(f"{key}.jpg")
+                    self.decision_images[key] = ImageTk.PhotoImage(img)
+                except FileNotFoundError:
+                    print(f"Warning: Missing decision image {key}.jpg")
+
+        # Special outcomes for Scenario 7 (Assassin)
+        for name in ["DFTop7Die", "DFTop7Live"]:
+            try:
+                img = Image.open(f"{name}.jpg")
+                self.decision_images[name] = ImageTk.PhotoImage(img)
+            except FileNotFoundError:
+                print(f"Warning: Missing special image {name}.jpg")
+
+        # Load track flow images (SFTop2–8, SFBottom2–8)
+                self.flow_images = {}
+        for i in range(2, 9):
+            for prefix in ["SFTop", "SFBottom"]:
+                key = f"{prefix}{i}"
+                try:
+                    img = Image.open(f"{key}.jpg")
+                    self.flow_images[key] = ImageTk.PhotoImage(img)
+                except FileNotFoundError:
+                    print(f"Warning: Missing flow image {key}.jpg")
+    
 
         self.math_problems = [
             {"question": "12 + 15?", "answer": 27},
@@ -124,6 +150,13 @@ class TrolleyGame(object):
         self.setup_result_screen()
 
         self.show_start_screen()
+
+    def show_frame(self, frame):
+        for f in [self.start_frame, self.problem_frame, self.math_frame,
+                self.stroop_frame, self.decision_frame, self.result_frame]:
+            f.grid_remove()
+        frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
+        frame.tkraise()
         
     def update_button_states(self, active):
         if active:
@@ -142,7 +175,6 @@ class TrolleyGame(object):
 
         # Load Title image
         img = Image.open("Title.jpg")
-        img = img.resize((800, 500))  # Resize to fit your aesthetic despair
         self.Title_photo = ImageTk.PhotoImage(img)
 
         # Add to label
@@ -366,24 +398,44 @@ class TrolleyGame(object):
         final_track = self.current_track if not switched else ("top" if self.current_track == "bottom" else "bottom")
         killed_group = node.top if final_track == "top" else node.bottom
 
-        # Base scoring
-        if node.red_path:
-            # remove from whichever philosophy point just got added
-            if node.reward == "utilitarian" and switched:
-                self.utilitarian_score -= 1
-            elif node.reward == "deontological" and not switched:
-                self.deontological_score -= 1
-            self.conflicted_score += 1  # or keep as penalty bucket
-        elif "family" in killed_group.lower() or "partner" in killed_group.lower() or "child" in killed_group.lower():
-            self.conflicted_score += 1  # this is where we’d trigger the psycho track if we had it
-        elif node.reward == "utilitarian" and switched:
-            self.utilitarian_score += 1
+        # Determine the moral classification of THIS choice
+        if node.reward == "utilitarian" and switched:
+            current_choice_type = "utilitarian"
         elif node.reward == "deontological" and not switched:
+            current_choice_type = "deontological"
+        else:
+            current_choice_type = "conflicted"
+
+        # Scoring based on consistency with last choice
+        if self.last_choice_type is None:
+            # First round, just assign the current choice
+            self.increment_moral_score(current_choice_type)
+        elif self.last_choice_type == current_choice_type:
+            self.increment_moral_score(current_choice_type)
+        else:
+            self.increment_moral_score("conflicted")
+            self.decrement_moral_score(self.last_choice_type)  # Penalize inconsistency
+
+        # Update for next time
+        self.last_choice_type = current_choice_type
+
+        #debug decision feedback
+        print(f"Evaluating alignment: current_track={self.current_track}, switched={switched}, final_track={final_track}, killed_group={killed_group}")
+
+        return killed_group
+    def increment_moral_score(self, moral_type):
+        if moral_type == "utilitarian":
+            self.utilitarian_score += 1
+        elif moral_type == "deontological":
             self.deontological_score += 1
         else:
             self.conflicted_score += 1
 
-        return killed_group
+    def decrement_moral_score(self, moral_type):
+        if moral_type == "utilitarian" and self.utilitarian_score > 0:
+            self.utilitarian_score -= 1
+        elif moral_type == "deontological" and self.deontological_score > 0:
+            self.deontological_score -= 1
 
     #shows the user a screen containing the choice they just made
     def setup_decision_screen(self):
@@ -444,14 +496,14 @@ class TrolleyGame(object):
 
 
     def start_game(self):
-        self.start_frame.grid_remove()
-        self.problem_frame.grid()
+        self.show_frame(self.problem_frame)
         # Restart scores when game restarts
         self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
         self.utilitarian_score = 0
         self.deontological_score = 0
         self.conflicted_score = 0
         self.current_problem = 0
+        self.last_choice_type = None 
         self.current_track = "bottom"
         self.previous_track = None
         self.track_history = []
@@ -460,21 +512,13 @@ class TrolleyGame(object):
         self.update_button_states(active=False)
 
     def load_problem(self):
-        # Hide everything 
-        self.start_frame.grid_remove()
-        self.math_frame.grid_remove()
-        self.stroop_frame.grid_remove()
-        self.decision_frame.grid_remove()
-        self.result_frame.grid_remove()
 
         if self.current_problem < len(self.track_nodes):
             #troubleshooting
-            self.problem_frame.grid()
-            self.problem_frame.tkraise()
+            self.show_frame(self.problem_frame)
             self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
             self.timer_label.lift()
 
-            # TEST visibility
             # Load the track node
             node = self.track_nodes[self.current_problem]
 
@@ -488,20 +532,31 @@ class TrolleyGame(object):
 
             # Update UI
             self.problem_label.config(text=description)
-            self.problem_illustration.config(image=self.problem_images[self.current_problem])
-            self.problem_illustration.image = self.problem_images[self.current_problem]  # keep reference
+            # Get the flow-specific image from cache
+            scenario_index = self.current_problem + 1
+            image_key = f"SFTop{scenario_index}" if self.current_track == "top" else f"SFBottom{scenario_index}"
+            image = self.flow_images.get(image_key)
+
+            if image:
+                self.problem_illustration.config(image=image)
+                self.problem_illustration.image = image
+            else:
+                print(f"Missing flow image: {image_key}")
+                self.problem_illustration.config(image=None)
+
             self.track_status.config(text=f"You're currently on {self.current_track.upper()} track")
 
-            # Reset button states
             self.choices_enabled = False
             self.update_button_states(active=False)
             self.enable_challenge_button()
-
             self.start_timer()
+
         else:
             print("No more problems. Showing results.")
-            self.problem_frame.grid_remove()
             self.show_results()
+            
+
+            
 
 
     def show_results(self):
@@ -595,14 +650,16 @@ class TrolleyGame(object):
             self.root.after_cancel(self.timer_id)
 
         node = self.track_nodes[self.current_problem]
+
+        # Evaluate choice BEFORE changing current track
+        killed_group = self.evaluate_moral_alignment(node, switch)
         
         # Track the history of choices
-        # If user switched, flip the track
+        # update current/previous track
         if switch:
             self.previous_track = self.current_track
             self.current_track = "top" if self.current_track == "bottom" else "bottom"
 
-        killed_group = self.evaluate_moral_alignment(node, switch)
 
         # Log the decision
         self.track_history.append({
@@ -629,14 +686,22 @@ class TrolleyGame(object):
 
         self.decision_label.config(text=message)
 
-        # Show an image based on choice (use dummy for now)
+        #  Special case for scenario 7 (the assassin)
+        if self.current_problem == 6 and not switched:
+            return self.handle_assassin_dice_roll()
 
-        img = Image.open("placeholder.png")  # Replace with actual image logic
-        img = img.resize((400, 250))
-        photo = ImageTk.PhotoImage(img)
+        # Figure out which image to show
+        image_key = f"DFTop{self.current_problem + 1}" if switched else f"DFBottom{self.current_problem + 1}"
+        photo = self.decision_images.get(image_key)
 
-        self.decision_image.config(image=photo)
-        self.decision_image.image = photo  # keep reference
+        if not photo:
+            print(f"Missing decision image: {image_key}")
+            self.decision_image.config(image=None)
+        else:
+            self.decision_image.config(image=photo)
+            self.decision_image.image = photo
+
+
         self.decision_frame.grid()
 
         #next problem button
@@ -652,15 +717,12 @@ class TrolleyGame(object):
 
     def next_problem(self):
         #troubleshooting
-        self.decision_frame.grid_remove()
-        self.problem_frame.grid()
-        self.problem_frame.tkraise()
+        self.show_frame(self.problem_frame)
         self.current_problem += 1
         self.load_problem()
 
     def return_to_problem(self):
-        self.stroop_frame.grid_remove()
-        self.problem_frame.grid()
+        self.show_frame(self.problem_frame)
         self.choices_enabled = True
         self.update_button_states(active=True)
         self.disable_challenge_button()
@@ -676,7 +738,9 @@ class TrolleyGame(object):
         self.current_task_type = task_type
 
         if task_type == "math":
-            self.math_frame.tkraise()
+            self.show_frame(self.math_frame)
+            self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
+            self.timer_label.lift()
 
             self.task_entry.delete(0, END)
 
@@ -691,9 +755,9 @@ class TrolleyGame(object):
             
             self.task_label.update_idletasks()
         else:
-            self.math_frame.grid_remove()
-            self.stroop_frame.grid()
-            self.stroop_frame.tkraise()
+            self.show_frame(self.stroop_frame)
+            self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
+            self.timer_label.lift()
 
             self.stroop_feedback.config(text="",fg="red", bg="white")
             stroop = random.choice(self.stroop_tasks)
@@ -703,9 +767,6 @@ class TrolleyGame(object):
         #puts timer back on top
         self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
         self.timer_label.lift()
-
-            
-
 
     def check_math_answer(self):
         user_input = self.task_entry.get().strip()
@@ -783,6 +844,55 @@ class TrolleyGame(object):
     def restart_game(self):
         self.result_frame.grid_remove()
         self.show_start_screen()
+
+    def handle_assassin_dice_roll(self):
+        import random
+
+        died = random.random() < 0.75  # 75% chance of death
+
+        if died:
+            # Game over
+            image = self.decision_images.get("DFTop7Die") 
+            if image:
+                self.decision_image.config(image=image)
+                self.decision_image.image = image
+
+            # Append to history
+            self.track_history.append({
+                "switched": False,
+                "killed": "you, your partner, and your child",
+                "red_path": self.track_nodes[self.current_problem].red_path
+            })
+
+            # Schedule return to result screen after a few seconds
+            self.root.after(3500, self.show_results)
+        else:
+            image = self.decision_images.get("DFTop7Live")  
+            if image:
+                self.decision_image.config(image=image)
+                self.decision_image.image = image
+
+            # Proceed as usual
+            self.track_history.append({
+                "switched": False,
+                "killed": "nothing (you miraculously survived)",
+                "red_path": self.track_nodes[self.current_problem].red_path
+            })
+
+            self.continue_button = Label(self.decision_frame, text="Next Problem",
+                font=("Helvetica", 16), bg="#7C83FD", fg="white",
+                padx=15, pady=8, cursor="hand2")
+            self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+
+            self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+            self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
+            self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
+
+        self.decision_frame.grid()
+        self.timer_label.place_forget()
+        self.problem_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.stroop_frame.grid_remove()
 
 if __name__ == "__main__":
     root = Tk()
