@@ -1,7 +1,7 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#12am-2am May 14, 2025 Olivia
+#2am- May 14, 2025 Olivia
 #illustrations and design
 
 def generate_random_math_problem():
@@ -73,10 +73,10 @@ class TrolleyGame(object):
             TrackNode("5 of your closest friends", "a baby", "deontological"), # Stay = kill friends, Switch = kill baby
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
-            TrackNode("nothing", "a bomb (will stop the train but kill everyone inside it)", "deontological"),
+            TrackNode("nothing", "a bomb that will stop the train but kill everyone inside it. You can see about 8-10 people inside.", "deontological"),
             TrackNode("an assassin with a 75%% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), 
             #wanna add a spin the wheel thing or roll the dice thing here
-            TrackNode("you, your partner, and your child", "10 doctors, 10 soldiers, 10 engineers, and 1 infant", "deontological", red_path=True),
+            TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
         # Load all problem illustrations named 1.png to 8.png
@@ -490,7 +490,7 @@ class TrolleyGame(object):
             self.problem_label.config(text=description)
             self.problem_illustration.config(image=self.problem_images[self.current_problem])
             self.problem_illustration.image = self.problem_images[self.current_problem]  # keep reference
-            self.track_status.config(text=f"Currently on {self.current_track.upper()} track")
+            self.track_status.config(text=f"You're currently on {self.current_track.upper()} track")
 
             # Reset button states
             self.choices_enabled = False
