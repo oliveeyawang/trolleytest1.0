@@ -1,9 +1,8 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#3:30pm-5pm
-#debugging assassin path
-#debugging start button
+#5pm-6pm
+#adding bomb ending
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
@@ -74,8 +73,8 @@ class TrolleyGame(object):
             TrackNode("5 of your closest friends", "a baby", "deontological"), # Stay = kill friends, Switch = kill baby
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
-            TrackNode("nothing", "everyone inside the trolley (you can see about 8-10 people)", "deontological"),
-            TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing however the assassin will attempt to kill you", "deontological"), #add some roll the dice thing
+            TrackNode("nothing", "a bomb, so that the train is destroyed/stopped (but you can see about 8-10 people in the trolley)", "deontological"),
+            TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing however the assassin has exactly three bullets", "deontological"), #add some roll the dice thing
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
@@ -177,7 +176,7 @@ class TrolleyGame(object):
 
         #instructions
         instructions = ("INSTRUCTIONS:\n"
-                "You will face 8 trolley problems.\n"
+                "You will face up to 8 trolley problems.\n"
                 "You will have 30 seconds to read each scenerio and make a decision.\n"
                 "The catch: To make any kind of choice, you first must complete a little task.\n"
                 "We WILL judge your morality! \n")
@@ -569,7 +568,9 @@ class TrolleyGame(object):
 
         print("Result screen displayed")
 
-        
+        #scan for if trolley exploded
+        trolley_exploded = any(h.get("trolley_exploded", False) for h in self.track_history)
+
         # Scan for train_continues flag
         train_disaster = any(h.get("train_continues", False) for h in self.track_history)
 
@@ -578,6 +579,20 @@ class TrolleyGame(object):
         summary += f"Utilitarian choices: {self.utilitarian_score}\n"
         summary += f"Deontological choices: {self.deontological_score}\n"
         summary += f"Conflicted decisions: {self.conflicted_score}\n"
+
+        if any(h.get("trolley_destroyed", False) for h in self.track_history):
+            summary += (
+            "\n\nAfter you exploded the trolley, everyone onboard — approximately 8 to 10 people — died in the explosion.\n"
+            "However, the trolley could no longer harm anyone else remaining on the tracks.\n"
+            )
+
+        if trolley_exploded:
+            summary += (
+                "You prevented all remaining scenarios, saving:\n"
+                "- Yourself, your partner, and your child\n"
+                "- 10 world leaders, 10 Nobel Peace Prize winners, 10 philanthropists, and 1 infant\n"
+                "- An assassin with three bullets (who may still try to kill you and your family — good luck!)"
+            )
 
         if train_disaster:
             summary += (
@@ -609,11 +624,19 @@ class TrolleyGame(object):
             scenario = self.track_nodes[i]
             bottom_group = scenario.bottom
             top_group = scenario.top
+
             # Text structure
-            history_text = f"Scenario {i+1}: "
-            history_text += f"Bottom track: {bottom_group}, Top track: {top_group}\n"
-            history_text += f"Your choice: {'Switched' if history['switched'] else 'Stayed'} tracks\n"
-            history_text += f"You killed: {history['killed']}\n\n"
+            if history.get("trolley_exploded"):
+                history_text = (
+                    f"Scenario {i+1}: The trolley was destroyed before reaching either track.\n"
+                    "No one on the tracks was killed.\n"
+                    "Casualties: everyone onboard the trolley (estimated 8–10 people).\n\n"
+                )
+            else:
+                history_text = f"Scenario {i+1}: "
+                history_text += f"Bottom track: {bottom_group}, Top track: {top_group}\n"
+                history_text += f"Your choice: {'Switched' if history['switched'] else 'Stayed'} tracks\n"
+                history_text += f"You killed: {history['killed']}\n\n"
             
             self.track_history_text.insert(END, history_text)
 
@@ -683,6 +706,24 @@ class TrolleyGame(object):
 
         node = self.track_nodes[self.current_problem]
 
+        trolley_gone = any(h.get("trolley_destroyed", False) for h in self.track_history)
+
+        if trolley_gone:
+            killed_group = "nothing (the trolley was already destroyed)"
+            final_track = self.current_track if not switch else (
+                "top" if self.current_track == "bottom" else "bottom"
+            )
+
+            # still update moral score for trying to do something
+            current_choice_type = "utilitarian" if switch else "deontological"
+            self.increment_moral_score(current_choice_type)
+    
+            # Skip standard evaluation and jump to decision screen
+            self.show_decision_screen(switch, killed_group, final_track)
+            return
+
+
+
         # Evaluate choice BEFORE changing current track
         killed_group, final_track = self.evaluate_moral_alignment(node, switch)
         
@@ -716,6 +757,13 @@ class TrolleyGame(object):
         message = f"You {'switched tracks' if switched else 'stayed on the current track'}.\n"
         message += f"You killed: {killed}"
         self.decision_label.config(text=message)
+
+        if self.current_problem == 5:
+            node = self.track_nodes[self.current_problem]
+            if killed == node.top:
+                # The user switched to blow up the trolley
+                self.show_bomb_ending()
+                return
 
         # Scenario 7: Special handling if user kills the assassin (bottom group)
         if self.current_problem == 6:
@@ -909,6 +957,54 @@ class TrolleyGame(object):
 
         self.show_start_screen()
         self.root.update_idletasks()
+
+    def show_bomb_ending(self):
+        self.problem_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.stroop_frame.grid_remove()
+        self.timer_label.place_forget()
+        self.decision_frame.grid()
+        self.decision_frame.tkraise()
+        self.current_track = None  
+
+        image_key = "DFTop6"  
+        image = self.decision_images.get(image_key)
+
+        if image:
+            self.decision_image.config(image=image)
+            self.decision_image.image = image
+            self.decision_image.update_idletasks()
+            self.decision_image.config(text="")  # Clear any fallback text
+        else:
+            print(f"Warning: DFTop6 image not found.")
+            self.decision_image.config(text="The trolley exploded", font=("Helvetica", 24), bg="white")
+
+        self.decision_label.config(
+            text="You chose to switch tracks and destroy the trolley.\n\nNo one on the tracks was harmed.\n"
+                "Everyone inside the trolley perished.",
+            font=("Helvetica", 20), bg="white"
+        )
+
+        # add to score
+        self.utilitarian_score += 1
+
+        # Log this decision
+        self.track_history.append({
+            "switched": True,
+            "killed": "everyone inside the trolley (estimated 8-10 people)",
+            "red_path": True,
+            "trolley_exploded": True,
+            "trolley_destroyed": True
+        })
+
+        # Button now ends the game, not proceeds to the next scenario
+        self.continue_button = Label(self.decision_frame, text="See Results",
+            font=("Helvetica", 16), bg="#FF5252", fg="white",
+            padx=15, pady=8, cursor="hand2")
+        self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+        self.continue_button.bind("<Button-1>", lambda e: self.show_results())  # Go directly to final screen
+
+
 
     def handle_assassin_dice_roll(self):
         import random
