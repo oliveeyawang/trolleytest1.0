@@ -1,8 +1,8 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#5pm-6pm
-#adding bomb ending
+#6pm-
+#debugging out of time func
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
@@ -682,20 +682,16 @@ class TrolleyGame(object):
 
         # Treat as default "stay"
         node = self.track_nodes[self.current_problem]
-        killed = node.bottom if self.current_track == "bottom" else node.top
+
+        killed_group, final_track = self.evaluate_moral_alignment(node, switched=False)
 
         self.track_history.append({
             "switched": False,
-            "killed": killed,
+            "killed": killed_group,
             "red_path": node.red_path
         })
 
-        if node.reward == "utilitarian":
-            self.deontological_score += 1
-        else:
-            self.utilitarian_score += 1
-
-        self.show_decision_screen(False, killed, self.current_track)
+        self.show_decision_screen(False, killed_group, self.current_track)
 
     def make_choice(self, switch):
         if self.current_problem >= len(self.track_nodes):
