@@ -1,8 +1,9 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#10am-11am May 14, 2025 Olivia
-#debugging flow to results screen
+#11am-11:30 May 14, 2025 Olivia
+#debugged flow to results screen
+#debugged kill assassin output image
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -557,7 +558,15 @@ class TrolleyGame(object):
         if self.timer_id is not None:
             self.root.after_cancel(self.timer_id)
             self.timer_id = None
+         # Hide all other frames so nothing responds
+        self.problem_frame.grid_remove()
+        self.math_frame.grid_remove()
+        self.stroop_frame.grid_remove()
+        self.decision_frame.grid_remove()
+        self.start_frame.grid_remove()
+
         self.result_frame.grid()
+        self.result_frame.tkraise()
 
         print("Result screen displayed")
         # Build summary text
@@ -726,6 +735,10 @@ class TrolleyGame(object):
         self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
         self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
         self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
+
+        if self.current_problem == len(self.track_nodes) - 1:
+            self.continue_button.config(text="See Results")
+            self.continue_button.bind("<Button-1>", lambda e: self.show_results())
         
 
     def next_problem(self):
@@ -738,7 +751,7 @@ class TrolleyGame(object):
         #troubleshooting
         print(f"Current problem index after increment: {self.current_problem}")
         print(f"Total number of problems: {len(self.track_nodes)}")
-        
+
         self.show_frame(self.problem_frame)
         self.current_problem += 1
         self.load_problem()
