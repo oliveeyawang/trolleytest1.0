@@ -1,8 +1,9 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#2:30pm-330pm
-#debugged timer
+#3:30pm-5pm
+#debugging assassin path
+#debugging start button
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
@@ -74,7 +75,7 @@ class TrolleyGame(object):
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
             TrackNode("nothing", "everyone inside the trolley (you can see about 8-10 people)", "deontological"),
-            TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), #add some roll the dice thing
+            TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing however the assassin will attempt to kill you", "deontological"), #add some roll the dice thing
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
@@ -567,13 +568,25 @@ class TrolleyGame(object):
         self.result_frame.tkraise()
 
         print("Result screen displayed")
+
+        
+        # Scan for train_continues flag
+        train_disaster = any(h.get("train_continues", False) for h in self.track_history)
+
         # Build summary text
         summary = f"Congratulations! You've completed all dilemmas. We've concluded you have questionable morals!\n\n"
         summary += f"Utilitarian choices: {self.utilitarian_score}\n"
         summary += f"Deontological choices: {self.deontological_score}\n"
         summary += f"Conflicted decisions: {self.conflicted_score}\n"
 
-        if self.utilitarian_score > self.deontological_score:
+        if train_disaster:
+            summary += (
+                "\n\nAfter you died trying to spare the assassin, "
+                "the trolley continued down the top track and killed over 30 people, including 10 world leaders, "
+                "10 Nobel Peace Prize winners, 10 philanthropists, and 1 infant. Nice going."
+            )
+
+        elif self.utilitarian_score > self.deontological_score:
             summary += "\n\nYou lean utilitarian – you prioritize the greater good over individual rights."
         elif self.deontological_score > self.utilitarian_score:
             summary += "\n\nYou lean deontological – you respect moral duties over outcomes."
@@ -702,7 +715,6 @@ class TrolleyGame(object):
     
         message = f"You {'switched tracks' if switched else 'stayed on the current track'}.\n"
         message += f"You killed: {killed}"
-
         self.decision_label.config(text=message)
 
         # Scenario 7: Special handling if user kills the assassin (bottom group)
@@ -711,19 +723,6 @@ class TrolleyGame(object):
             if killed == node.bottom:
                 # They killed the assassin
                 image_key = "DFBottom7"
-                self.track_history.append({
-                    "switched": False,
-                    "killed": killed,
-                    "red_path": node.red_path
-                })
-                self.continue_button = Label(self.decision_frame, text="Next Problem",
-                    font=("Helvetica", 16), bg="#7C83FD", fg="white",
-                    padx=15, pady=8, cursor="hand2")
-                self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
-
-                self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
-                self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
-                self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
 
             elif killed == node.top:
                 # They spared the assassin – go to dice roll
@@ -736,37 +735,29 @@ class TrolleyGame(object):
 
         # Figure out which image to show
         print(f"Image key requested: {image_key}")
-
         photo = self.decision_images.get(image_key)
-
-        if not photo:
-            print(f"Missing decision image: {image_key}")
-            self.decision_image.config(image=None)
-        else:
+        if photo:
             self.decision_frame.grid()
             self.decision_frame.tkraise() 
             self.decision_image.config(image=photo)
             self.decision_image.image = photo
             self.decision_image.update_idletasks()
 
-
-        self.decision_frame.grid()
-
         #next problem button
-        self.continue_button = Label(self.decision_frame, text="Next Problem",
-                             font=("Helvetica", 16), bg="#7C83FD", fg="white",
-                             padx=15, pady=8, cursor="hand2")
-        self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+        if not (self.current_problem == 6 and killed == self.track_nodes[self.current_problem].top):
+            self.continue_button = Label(self.decision_frame, text="Next Problem",
+                font=("Helvetica", 16), bg="#7C83FD", fg="white",
+                padx=15, pady=8, cursor="hand2")
+            self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
 
-        self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
-        self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
-        self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
+            self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+            self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
+            self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
 
-        # If we are currently on the LAST problem
-        self.continue_button.config(
-            text="Next Problem" if self.current_problem < len(self.track_nodes) - 1 else "See Results"
-        )
-        self.continue_button.bind("<Button-1>", lambda e: self.next_problem())     
+            # If we are currently on the LAST problem
+            self.continue_button.config(
+                text="Next Problem" if self.current_problem < len(self.track_nodes) - 1 else "See Results"
+            )
 
     def next_problem(self):
         self.current_problem += 1
@@ -904,57 +895,101 @@ class TrolleyGame(object):
     def restart_game(self):
         # Go back to start screen
         self.result_frame.grid_remove()
+        self.current_problem = 0
+        self.utilitarian_score = 0
+        self.deontological_score = 0
+        self.conflicted_score = 0
+        self.track_history = []
+        self.current_track = "bottom"
+        self.previous_track = None
+        self.last_choice_type = None
+
+        self.choices_enabled = False
+        self.update_button_states(active=False)
+
         self.show_start_screen()
+        self.root.update_idletasks()
 
     def handle_assassin_dice_roll(self):
         import random
-
         died = random.random() < 0.75  # 75% chance of death
 
-        if died:
-            # Game over
-            image = self.decision_images.get("DFTop7Die") 
-            if image:
-                self.decision_image.config(image=image)
-                self.decision_image.image = image
-
-            # Append to history
-            self.track_history.append({
-                "switched": False,
-                "killed": "you, your partner, and your child",
-                "red_path": self.track_nodes[self.current_problem].red_path
-            })
-
-            # Schedule return to result screen after a few seconds
-            self.root.after(3500, self.show_results)
-        else:
-            image = self.decision_images.get("DFTop7Live")  
-            if image:
-                self.decision_image.config(image=image)
-                self.decision_image.image = image
-
-            # Proceed as usual
-            self.track_history.append({
-                "switched": False,
-                "killed": "nothing (you miraculously survived)", # Mark that user survived
-                "red_path": self.track_nodes[self.current_problem].red_path
-            })
-
-            self.continue_button = Label(self.decision_frame, text="Next Problem",
-                font=("Helvetica", 16), bg="#7C83FD", fg="white",
-                padx=15, pady=8, cursor="hand2")
-            self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
-            # Sets up the next problem
-            self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
-            self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
-            self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
-        # Remove unecessary elements
-        self.decision_frame.grid()
-        self.timer_label.place_forget()
         self.problem_frame.grid_remove()
         self.math_frame.grid_remove()
         self.stroop_frame.grid_remove()
+        self.timer_label.place_forget()
+        self.decision_frame.grid()
+        self.decision_frame.tkraise()
 
+        die_img = self.decision_images.get("DFTop7Die")
+        live_img = self.decision_images.get("DFTop7Live")
+
+        if not die_img or not live_img:
+            print("Missing images for assassin animation.")
+            self.decision_image.config(text="MISSING IMAGE", font=("Helvetica", 20))
+            return
+        
+        def final_result():
+            if died: 
+                self.decision_image.config(image=die_img)
+                self.decision_image.image = die_img
+                self.track_history.append({
+                    "switched": True,
+                    "killed": "you, your partner, and your child",
+                    "red_path": self.track_nodes[self.current_problem].red_path,
+                    "train_continues": True  # we'll use this later
+                })
+
+                # Sad Game Over button
+                self.continue_button = Label(
+                    self.decision_frame, text="Face the Consequences",
+                    font=("Helvetica", 16), bg="#FF5252", fg="white",
+                    padx=15, pady=8, cursor="hand2"
+                )
+                self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+                self.continue_button.bind("<Button-1>", lambda e: self.show_results())
+                #self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#D32F2F"))
+                #self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#FF5252"))
+                # Run flip animation, then show death result + button
+            else:
+                self.decision_image.config(image=live_img)
+                self.decision_image.image = live_img
+                self.track_history.append({
+                    "switched": True,
+                    "killed": "nothing (you miraculously survived)", # Mark that user survived
+                    "red_path": self.track_nodes[self.current_problem].red_path
+                })
+
+                self.continue_button = Label(self.decision_frame, text="Next Problem",
+                    font=("Helvetica", 16), bg="#7C83FD", fg="white",
+                    padx=15, pady=8, cursor="hand2"
+                )
+                self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+                # Sets up the next problem
+                self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+                #self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
+                #self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
+
+
+        def flip_animation():
+            imgs = [live_img, die_img]
+            i = 0
+
+            def next_frame():
+                nonlocal i
+                self.decision_image.config(image=imgs[i % 2])
+                i += 1
+                if i < 10:
+                    self.root.after(100, next_frame)
+                else:
+                    final_result()
+
+            next_frame()
+
+        # Run flip animation before results
+        flip_animation()
+        
+        
 if __name__ == "__main__":
     root = Tk()
     game = TrolleyGame(root)
