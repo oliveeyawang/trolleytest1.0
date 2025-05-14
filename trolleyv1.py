@@ -2,8 +2,7 @@ from tkinter import *
 import random
 from PIL import Image, ImageTk
 #repushing 10am changes
-#10am-10:45am May 12, 2025 Olivia
-#added immediate feedback intermediate slide
+#5pm May 13, 2025 Olivia
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
