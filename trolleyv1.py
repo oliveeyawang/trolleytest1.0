@@ -1,9 +1,9 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#11am-11:30 May 14, 2025 Olivia
-#debugged flow to results screen
-#debugged kill assassin output image
+#12pm-12:45pm May 14, 2025 Olivia
+#debugging timer
+#debugging assassin special case
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -74,8 +74,7 @@ class TrolleyGame(object):
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
             TrackNode("nothing", "everyone inside the trolley (you can see about 8-10 people)", "deontological"),
-            TrackNode("an assassin with a 75%% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), 
-            #wanna add a spin the wheel thing or roll the dice thing here
+            TrackNode("an assassin with a 75%% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), #add some roll the dice thing
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
@@ -608,9 +607,9 @@ class TrolleyGame(object):
 
 
     def start_timer(self):
-        self.timer_id = None
         if self.timer_id is not None:
             self.root.after_cancel(self.timer_id)
+            self.timer_id = None  # move this here
 
         self.time_left = 60
         self.update_timer()
@@ -629,6 +628,15 @@ class TrolleyGame(object):
 
     #if user runs out of time on choice
     def out_of_time(self):
+
+        if self.timer_id is not None:
+            self.root.after_cancel(self.timer_id)
+            self.timer_id = None
+    
+        if self.current_problem >= len(self.track_nodes):
+            print("No more problems. Timer expired, but nothing to resolve.")
+            return
+    
         self.stroop_frame.grid_remove()
         self.math_frame.grid_remove()
         self.problem_frame.grid_remove()
@@ -700,9 +708,24 @@ class TrolleyGame(object):
             if killed == node.bottom:
                 # They killed the assassin
                 image_key = "DFBottom7"
+                self.track_history.append({
+                    "switched": False,
+                    "killed": killed,
+                    "red_path": node.red_path
+                })
+                self.continue_button = Label(self.decision_frame, text="Next Problem",
+                    font=("Helvetica", 16), bg="#7C83FD", fg="white",
+                    padx=15, pady=8, cursor="hand2")
+                self.continue_button.grid(row=15, column=13, columnspan=4, pady=(30, 0))
+
+                self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+                self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
+                self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
+
             elif killed == node.top:
                 # They spared the assassin – go to dice roll
-                return self.handle_assassin_dice_roll()
+                self.handle_assassin_dice_roll()
+                return
             else:
                 image_key = f"DF{final_track.capitalize()}{self.current_problem + 1}"
         else:
@@ -736,9 +759,12 @@ class TrolleyGame(object):
         self.continue_button.bind("<Enter>", lambda e: self.continue_button.config(bg="#5C62CC"))
         self.continue_button.bind("<Leave>", lambda e: self.continue_button.config(bg="#7C83FD"))
 
-        if self.current_problem == len(self.track_nodes) - 1:
-            self.continue_button.config(text="See Results")
-            self.continue_button.bind("<Button-1>", lambda e: self.show_results())
+        # If we are currently on the LAST problem
+        self.continue_button.config(
+            text="Next Problem" if self.current_problem < len(self.track_nodes) - 1 else "See Results"
+        )
+        self.continue_button.bind("<Button-1>", lambda e: self.next_problem())
+
         
 
     def next_problem(self):
@@ -746,15 +772,9 @@ class TrolleyGame(object):
         if self.current_problem >= len(self.track_nodes):
             self.show_results()
         else:
+            self.show_frame(self.problem_frame)
             self.load_problem()
 
-        #troubleshooting
-        print(f"Current problem index after increment: {self.current_problem}")
-        print(f"Total number of problems: {len(self.track_nodes)}")
-
-        self.show_frame(self.problem_frame)
-        self.current_problem += 1
-        self.load_problem()
 
     def return_to_problem(self):
         self.show_frame(self.problem_frame)
