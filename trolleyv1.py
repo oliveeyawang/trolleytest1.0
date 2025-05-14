@@ -1,11 +1,9 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#7am-9am May 14, 2025 Olivia
+#9am-10am May 14, 2025 Olivia
 #added more specific illustrations
-#decision feedback
-#choice tracking
-#rolling the dice at assassin scenario
+#debugging decision feedback
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -81,9 +79,11 @@ class TrolleyGame(object):
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
-        # Load decision feedback images (DFTop1–8, DFBottom1–8)
+        # preload decision feedback images (DFTop1–8, DFBottom1–8)
         self.decision_images = {}  # e.g. {"DFTop1": PhotoImage, "DFBottom1": PhotoImage}
         self.flow_images = {}
+        self.images = {}  
+        self.images["Title"] = ImageTk.PhotoImage(Image.open("Title.jpg"))
         for i in range(1, 9):
             for prefix in ["DFTop", "DFBottom"]:
                 key = f"{prefix}{i}"
@@ -102,8 +102,7 @@ class TrolleyGame(object):
                 print(f"Warning: Missing special image {name}.jpg")
 
         # Load track flow images (SFTop2–8, SFBottom2–8)
-                self.flow_images = {}
-        for i in range(2, 9):
+        for i in range(1, 9):
             for prefix in ["SFTop", "SFBottom"]:
                 key = f"{prefix}{i}"
                 try:
@@ -174,8 +173,7 @@ class TrolleyGame(object):
         self.start_frame.grid(row=0, column=0, rowspan=30, columnspan=30, sticky="nsew")
 
         # Load Title image
-        img = Image.open("Title.jpg")
-        self.Title_photo = ImageTk.PhotoImage(img)
+        self.Title_photo = self.images["Title"]
 
         # Add to label
         self.Title_label = Label(self.start_frame, image=self.Title_photo, bg="white")
@@ -422,7 +420,8 @@ class TrolleyGame(object):
         #debug decision feedback
         print(f"Evaluating alignment: current_track={self.current_track}, switched={switched}, final_track={final_track}, killed_group={killed_group}")
 
-        return killed_group
+        return killed_group, final_track
+    
     def increment_moral_score(self, moral_type):
         if moral_type == "utilitarian":
             self.utilitarian_score += 1
@@ -652,7 +651,7 @@ class TrolleyGame(object):
         node = self.track_nodes[self.current_problem]
 
         # Evaluate choice BEFORE changing current track
-        killed_group = self.evaluate_moral_alignment(node, switch)
+        killed_group, final_track = self.evaluate_moral_alignment(node, switch)
         
         # Track the history of choices
         # update current/previous track
@@ -671,11 +670,11 @@ class TrolleyGame(object):
         print(f"Choice made: {'Switch' if switch else 'Stay'}")
         print(f"Killed: {killed_group}")
         print(f"Utilitarian: {self.utilitarian_score}, Deontological: {self.deontological_score}, Conflicted: {self.conflicted_score}")
-
-        self.show_decision_screen(switch, killed_group)
+        
+        self.show_decision_screen(switch, killed_group, final_track)
         
     
-    def show_decision_screen(self, switched, killed):
+    def show_decision_screen(self, switched, killed, final_track):
         self.problem_frame.grid_remove()
         self.math_frame.grid_remove()
         self.timer_label.place_forget()
@@ -691,7 +690,9 @@ class TrolleyGame(object):
             return self.handle_assassin_dice_roll()
 
         # Figure out which image to show
-        image_key = f"DFTop{self.current_problem + 1}" if switched else f"DFBottom{self.current_problem + 1}"
+        image_key = f"DF{final_track.capitalize()}{self.current_problem + 1}"
+        print(f"Image key requested: {image_key}")
+
         photo = self.decision_images.get(image_key)
 
         if not photo:
