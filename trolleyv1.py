@@ -1,13 +1,12 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#12pm-12:45pm May 14, 2025 Olivia
-#debugging timer
-#debugging assassin special case
+#2:30pm-330pm
+#debugged timer
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
-    operation = random.choice(["+", "×"])
+        operation = random.choice(["+", "×"])
     
         if operation == "+":
             # Find two numbers that add up to 50 or less
@@ -51,7 +50,7 @@ class TrolleyGame(object):
         self.previous_track = None
 
         # timer variables
-        self.timer_label = Label(self.root, text="Time: 60", font=("Helvetica", 16), bg="white")
+        self.timer_label = Label(self.root, text="Time:30", font=("Helvetica", 16), bg="white")
         self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")  # this floats it top right
 
         # Grid to work with
@@ -75,7 +74,7 @@ class TrolleyGame(object):
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
             TrackNode("nothing", "everyone inside the trolley (you can see about 8-10 people)", "deontological"),
-            TrackNode("an assassin with a 75%% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), #add some roll the dice thing
+            TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), #add some roll the dice thing
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
         ]
 
@@ -178,7 +177,7 @@ class TrolleyGame(object):
         #instructions
         instructions = ("INSTRUCTIONS:\n"
                 "You will face 8 trolley problems.\n"
-                "You will have 60 seconds to read each scenerio and make a decision.\n"
+                "You will have 30 seconds to read each scenerio and make a decision.\n"
                 "The catch: To make any kind of choice, you first must complete a little task.\n"
                 "We WILL judge your morality! \n")
         instruction_label = Label(self.start_frame, text=instructions, font=("Helvetica", 20), bg="white", wraplength=700, justify="center")
@@ -611,14 +610,19 @@ class TrolleyGame(object):
             self.root.after_cancel(self.timer_id)
             self.timer_id = None  
 
-        self.time_left = 60
+        self.time_left = 30
         self.update_timer()
 
     def update_timer(self):
         if self.current_problem >= len(self.track_nodes):
             return #removes timer if all problems are done
+        
         if self.time_left <= 0:
-            self.out_of_time()
+            self.timer_label.config(text="Time: 0", fg="red", bg="white", font=("Helvetica", 18, "bold"))
+            self.root.after(100, self.out_of_time)
+            # Delay execution of out_of_time to allow UI update
+            
+            
         else: # Changer timer color when countdown from 10
             color = "red" if self.time_left <= 10 else "black"
             font = ("Helvetica", 18, "bold") if self.time_left <= 10 else ("Helvetica", 16)
@@ -634,7 +638,6 @@ class TrolleyGame(object):
             self.timer_id = None
         # Stops timer from resetting if all problems are done
         if self.current_problem >= len(self.track_nodes):
-            print("No more problems. Timer expired, but nothing to resolve.")
             return
     
         self.stroop_frame.grid_remove()
@@ -656,7 +659,7 @@ class TrolleyGame(object):
         else:
             self.utilitarian_score += 1
 
-        self.show_decision_screen(False, killed)
+        self.show_decision_screen(False, killed, self.current_track)
 
     def make_choice(self, switch):
         if self.current_problem >= len(self.track_nodes):
