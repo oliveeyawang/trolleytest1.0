@@ -1,9 +1,8 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#9am-10am May 14, 2025 Olivia
-#added more specific illustrations
-#debugging decision feedback
+#10am-11am May 14, 2025 Olivia
+#debugging flow to results screen
 
 def generate_random_math_problem():
         operation = random.choice(["+", "×"])
@@ -73,7 +72,7 @@ class TrolleyGame(object):
             TrackNode("5 of your closest friends", "a baby", "deontological"), # Stay = kill friends, Switch = kill baby
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
             TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
-            TrackNode("nothing", "a bomb that will stop the train but kill everyone inside it. You can see about 8-10 people inside.", "deontological"),
+            TrackNode("nothing", "everyone inside the trolley (you can see about 8-10 people)", "deontological"),
             TrackNode("an assassin with a 75%% chance of killing you and a couple innocent bystanders", "nothing", "deontological"), 
             #wanna add a spin the wheel thing or roll the dice thing here
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
@@ -404,17 +403,7 @@ class TrolleyGame(object):
         else:
             current_choice_type = "conflicted"
 
-        # Scoring based on consistency with last choice
-        if self.last_choice_type is None:
-            # First round, just assign the current choice
-            self.increment_moral_score(current_choice_type)
-        elif self.last_choice_type == current_choice_type:
-            self.increment_moral_score(current_choice_type)
-        else:
-            self.increment_moral_score("conflicted")
-            self.decrement_moral_score(self.last_choice_type)  # Penalize inconsistency
-
-        # Update for next time
+        self.increment_moral_score(current_choice_type)
         self.last_choice_type = current_choice_type
 
         #debug decision feedback
@@ -478,13 +467,21 @@ class TrolleyGame(object):
         self.track_history_text.grid(row=13, column=10, columnspan=10)
 
 
-        # Restart Button
-        restart_button = Button(self.result_frame, text="Play Again", font=("Helvetica", 16), command=self.restart_game)
-        restart_button.grid(row=15, column=13, columnspan=4, pady=10)
+        # Restart Label (Fake Button)
+        restart_label = Label(self.result_frame, text="Play Again", font=("Helvetica", 16),
+                            bg="#a0fc8d", fg="black", padx=20, pady=10, cursor="hand2")
+        restart_label.grid(row=15, column=13, columnspan=4, pady=10)
+        restart_label.bind("<Button-1>", lambda e: self.restart_game())
+        restart_label.bind("<Enter>", lambda e: restart_label.config(bg="#90e37a"))
+        restart_label.bind("<Leave>", lambda e: restart_label.config(bg="#a0fc8d"))
 
-        # Exit Button
-        exit_button = Button(self.result_frame, text="Exit", font=("Helvetica", 16), command=self.root.quit)
-        exit_button.grid(row=16, column=13, columnspan=4)
+        # Exit Label (Fake Button)
+        exit_label = Label(self.result_frame, text="Exit", font=("Helvetica", 16),
+                   bg="#ff776d", fg="black", padx=20, pady=10, cursor="hand2")
+        exit_label.grid(row=16, column=13, columnspan=4)
+        exit_label.bind("<Button-1>", lambda e: self.root.quit())
+        exit_label.bind("<Enter>", lambda e: exit_label.config(bg="#e4665d"))
+        exit_label.bind("<Leave>", lambda e: exit_label.config(bg="#ff776d"))
 
     def show_start_screen(self):
         self.problem_frame.grid_remove()
@@ -539,6 +536,7 @@ class TrolleyGame(object):
             if image:
                 self.problem_illustration.config(image=image)
                 self.problem_illustration.image = image
+                self.problem_illustration.update_idletasks() 
             else:
                 print(f"Missing flow image: {image_key}")
                 self.problem_illustration.config(image=None)
@@ -555,11 +553,12 @@ class TrolleyGame(object):
             self.show_results()
             
 
-            
-
-
     def show_results(self):
+        if self.timer_id is not None:
+            self.root.after_cancel(self.timer_id)
+            self.timer_id = None
         self.result_frame.grid()
+
         print("Result screen displayed")
         # Build summary text
         summary = f"Congratulations! You've completed all dilemmas. We've concluded you have questionable morals!\n\n"
@@ -597,9 +596,7 @@ class TrolleyGame(object):
             history_text += f"You killed: {history['killed']}\n\n"
             
             self.track_history_text.insert(END, history_text)
-        
-        # Show the result frame
-        self.result_frame.grid()
+
 
     def start_timer(self):
         self.timer_id = None
@@ -610,16 +607,16 @@ class TrolleyGame(object):
         self.update_timer()
 
     def update_timer(self):
+        if self.current_problem >= len(self.track_nodes):
+            return 
         if self.time_left <= 0:
             self.out_of_time()
         else:
             color = "red" if self.time_left <= 10 else "black"
             font = ("Helvetica", 18, "bold") if self.time_left <= 10 else ("Helvetica", 16)
-        
-        self.timer_label.config(text=f"Time: {self.time_left}", fg=color, bg="white", font=font)
-        
-        self.time_left -= 1
-        self.timer_id = self.root.after(1000, self.update_timer)
+            self.timer_label.config(text=f"Time: {self.time_left}", fg=color, bg="white", font=font)
+            self.time_left -= 1
+            self.timer_id = self.root.after(1000, self.update_timer)
 
     #if user runs out of time on choice
     def out_of_time(self):
@@ -645,6 +642,9 @@ class TrolleyGame(object):
         self.show_decision_screen(False, killed)
 
     def make_choice(self, switch):
+        if self.current_problem >= len(self.track_nodes):
+            print("No more problems left. Ignoring choice.")
+            return
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
 
@@ -685,12 +685,21 @@ class TrolleyGame(object):
 
         self.decision_label.config(text=message)
 
-        #  Special case for scenario 7 (the assassin)
-        if self.current_problem == 6 and not switched:
-            return self.handle_assassin_dice_roll()
+        # Scenario 7: Special handling if user kills the assassin (bottom group)
+        if self.current_problem == 6:
+            node = self.track_nodes[self.current_problem]
+            if killed == node.bottom:
+                # They killed the assassin
+                image_key = "DFBottom7"
+            elif killed == node.top:
+                # They spared the assassin – go to dice roll
+                return self.handle_assassin_dice_roll()
+            else:
+                image_key = f"DF{final_track.capitalize()}{self.current_problem + 1}"
+        else:
+            image_key = f"DF{final_track.capitalize()}{self.current_problem + 1}"
 
         # Figure out which image to show
-        image_key = f"DF{final_track.capitalize()}{self.current_problem + 1}"
         print(f"Image key requested: {image_key}")
 
         photo = self.decision_images.get(image_key)
@@ -699,8 +708,11 @@ class TrolleyGame(object):
             print(f"Missing decision image: {image_key}")
             self.decision_image.config(image=None)
         else:
+            self.decision_frame.grid()
+            self.decision_frame.tkraise() 
             self.decision_image.config(image=photo)
             self.decision_image.image = photo
+            self.decision_image.update_idletasks()
 
 
         self.decision_frame.grid()
@@ -717,7 +729,16 @@ class TrolleyGame(object):
         
 
     def next_problem(self):
+        self.current_problem += 1
+        if self.current_problem >= len(self.track_nodes):
+            self.show_results()
+        else:
+            self.load_problem()
+
         #troubleshooting
+        print(f"Current problem index after increment: {self.current_problem}")
+        print(f"Total number of problems: {len(self.track_nodes)}")
+        
         self.show_frame(self.problem_frame)
         self.current_problem += 1
         self.load_problem()
@@ -727,6 +748,13 @@ class TrolleyGame(object):
         self.choices_enabled = True
         self.update_button_states(active=True)
         self.disable_challenge_button()
+
+        self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
+        self.timer_label.lift()
+
+        self.problem_illustration.update_idletasks()
+        self.problem_label.update_idletasks()
+        self.problem_frame.update_idletasks()
 
     def show_math_challenge(self):
         #removes all frames
@@ -740,8 +768,6 @@ class TrolleyGame(object):
 
         if task_type == "math":
             self.show_frame(self.math_frame)
-            self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
-            self.timer_label.lift()
 
             self.task_entry.delete(0, END)
 
@@ -757,8 +783,6 @@ class TrolleyGame(object):
             self.task_label.update_idletasks()
         else:
             self.show_frame(self.stroop_frame)
-            self.timer_label.place(relx=0.95, rely=0.02, anchor="ne")
-            self.timer_label.lift()
 
             self.stroop_feedback.config(text="",fg="red", bg="white")
             stroop = random.choice(self.stroop_tasks)
