@@ -1,8 +1,9 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#9pm 
+#9pm-10pm
 #debugging utilitarian path / evaluate moral standpoint
+#sort of still iffy
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
@@ -392,8 +393,38 @@ class TrolleyGame(object):
         final_track = self.current_track if not switched else ("top" if self.current_track == "bottom" else "bottom")
         killed_group = node.top if final_track == "top" else node.bottom
 
-        # Decide if the user is acting utilitarian (switch = active kill to save more) or deontological (stay = no interference)
-        current_choice_type = "utilitarian" if switched else "deontological"
+        def count_people(desc):
+            if "nothing" in desc:
+                return 0
+            elif "you, your partner, and your child" in desc:
+                return 3
+            elif "world leaders" in desc or "Nobel" in desc or "philanthropists" in desc:
+                return 31
+            elif "assassin" in desc:
+                return 1
+            elif any(s in desc for s in ["doctors", "preschoolers", "friends"]):
+                digits = [int(s) for s in desc.split() if s.isdigit()]
+                return sum(digits) if digits else 5
+            elif "bomb" in desc:
+                return 8
+            else:
+                digits = [int(s) for s in desc.split() if s.isdigit()]
+                return sum(digits) if digits else 1
+        # Use these strings for moral evaluation
+        killed_desc = node.top if final_track == "top" else node.bottom
+        saved_desc = node.bottom if final_track == "top" else node.top
+            
+        killed_count = count_people(killed_desc)
+        saved_count = count_people(saved_desc)
+
+        if killed_count < saved_count:
+            current_choice_type = "utilitarian"
+        elif killed_count > saved_count:
+            current_choice_type = "deontological"
+        else:
+            current_choice_type = "conflicted"
+       
+
 
         # First scenario: no history, so we use this to set their initial alignment
         if self.last_choice_type is None:
@@ -407,8 +438,10 @@ class TrolleyGame(object):
         else:
             self.conflicted_score += 1
 
-        print(f"[EVAL] {'Switched' if switched else 'Stayed'} → {current_choice_type}")
-        print(f"[EVAL] Last: {self.last_choice_type} | U:{self.utilitarian_score}, D:{self.deontological_score}, C:{self.conflicted_score}")
+        print(f"[EVAL] Scenario {self.current_problem + 1}: {'Switched' if switched else 'Stayed'}")
+        print(f"[EVAL] Type: {current_choice_type}, Previous: {self.last_choice_type}")
+        print(f"[EVAL] U:{self.utilitarian_score}, D:{self.deontological_score}, C:{self.conflicted_score}")
+        
 
         return killed_group, final_track
 
@@ -952,6 +985,8 @@ class TrolleyGame(object):
         self.current_track = "bottom"
         self.previous_track = None
         self.last_choice_type = None
+        if hasattr(self, 'continue_button') and self.continue_button.winfo_exists():
+            self.continue_button.destroy()
 
         self.choices_enabled = False
         self.update_button_states(active=False)
