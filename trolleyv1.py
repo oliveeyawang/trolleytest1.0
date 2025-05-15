@@ -1,8 +1,8 @@
 from tkinter import *
 import random
 from PIL import Image, ImageTk
-#6pm-
-#debugging out of time func
+#9pm 
+#debugging utilitarian path / evaluate moral standpoint
 
 def generate_random_math_problem():
     # Choose between multiplication and addition
@@ -69,10 +69,10 @@ class TrolleyGame(object):
         # on which track they're currently on and their past choices
         self.track_nodes = [
             TrackNode("5 people", "1 person", "utilitarian"), # Stay = deontological (kill 5), Switch = utilitarian (kill 1)
-            TrackNode("a family member", "5 people", "deontological", red_path=True), # Stay = kill family, Switch = kill 5
+            TrackNode("a family member", "5 people", "utilitarian", red_path=True), # Stay = kill family, Switch = kill 5
             TrackNode("5 of your closest friends", "a baby", "deontological"), # Stay = kill friends, Switch = kill baby
             TrackNode("2 brilliant doctors", "another family member", "deontological", red_path=True),
-            TrackNode("5 preschoolers", "an active shooter", "deontological", red_path=True),
+            TrackNode("5 preschoolers", "an active shooter", "utilitarian", red_path=True),
             TrackNode("nothing", "a bomb, so that the train is destroyed/stopped (but you can see about 8-10 people in the trolley)", "deontological"),
             TrackNode("an assassin with a 75% chance of killing you and a couple innocent bystanders", "nothing however the assassin has exactly three bullets", "deontological"), #add some roll the dice thing
             TrackNode("you, your partner, and your child", "10 world leaders, 10 noble peace prize winners, 10 philanthropists, and 1 infant", "deontological", red_path=True),
@@ -392,21 +392,26 @@ class TrolleyGame(object):
         final_track = self.current_track if not switched else ("top" if self.current_track == "bottom" else "bottom")
         killed_group = node.top if final_track == "top" else node.bottom
 
-        # Determine the moral classification of THIS choice
-        if node.reward == "utilitarian" and switched:
-            current_choice_type = "utilitarian"
-        elif node.reward == "deontological" and not switched:
-            current_choice_type = "deontological"
+        # Decide if the user is acting utilitarian (switch = active kill to save more) or deontological (stay = no interference)
+        current_choice_type = "utilitarian" if switched else "deontological"
+
+        # First scenario: no history, so we use this to set their initial alignment
+        if self.last_choice_type is None:
+            # First decision
+            self.increment_moral_score(current_choice_type)
+            self.last_choice_type = current_choice_type
+        elif self.last_choice_type == current_choice_type:
+            # Still consistent
+            self.increment_moral_score(current_choice_type)
+            self.last_choice_type = current_choice_type
         else:
-            current_choice_type = "conflicted"
+            self.conflicted_score += 1
 
-        self.increment_moral_score(current_choice_type)
-        self.last_choice_type = current_choice_type
-
-        #debug decision feedback
-        print(f"Evaluating alignment: current_track={self.current_track}, switched={switched}, final_track={final_track}, killed_group={killed_group}")
+        print(f"[EVAL] {'Switched' if switched else 'Stayed'} → {current_choice_type}")
+        print(f"[EVAL] Last: {self.last_choice_type} | U:{self.utilitarian_score}, D:{self.deontological_score}, C:{self.conflicted_score}")
 
         return killed_group, final_track
+
     
     def increment_moral_score(self, moral_type):
         if moral_type == "utilitarian": # Adds to utilitarianism
